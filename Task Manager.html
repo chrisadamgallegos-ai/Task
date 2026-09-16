@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#172853">
+<title>BWW Task Manager</title>
+<style>
+:root{
+  --navy:#172853; --navy-2:#2E75B6; --ink:#1b1f2a; --muted:#6b7280; --line:#d0d0d0;
+  --paper:#ffffff; --stripe:#f5f5f5; --bg:#eef0f4;
+  --red-bg:#FFC7CE; --red-fg:#9C0006;
+  --green-bg:#C6EFCE; --green-fg:#006100;
+  --blue-bg:#D9E1F2; --blue-fg:#1F3864;
+  --hi-bg:#FCE4D6; --hi-fg:#C65911;
+  --med-bg:#FFF2CC; --med-fg:#9C5700;
+  --low-bg:#E2EFDA; --low-fg:#375623;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.4 Arial,Helvetica,sans-serif}
+button,input,select,textarea{font:inherit;color:inherit}
+header{background:var(--navy);color:#fff;padding:14px 20px;display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+header h1{margin:0;font-size:18px;font-weight:700;letter-spacing:.2px}
+header .stats{display:flex;gap:14px;margin-left:auto;font-size:13px}
+header .stats span b{font-size:16px;margin-right:4px}
+header .stats .warn b{color:#ffb3b3}
+header .tools{display:flex;gap:6px}
+header .tools button{background:transparent;border:1px solid rgba(255,255,255,.45);color:#fff;border-radius:4px;padding:5px 10px;cursor:pointer}
+header .tools button:hover{background:rgba(255,255,255,.12)}
+main{max-width:1400px;margin:0 auto;padding:16px 20px 60px}
+
+/* New task entry, mirrors the Form sheet */
+.entry{background:var(--paper);border:1px solid var(--line);border-top:4px solid var(--navy);padding:12px 14px;margin-bottom:14px}
+.entry h2{margin:0 0 8px;font-size:13px;color:var(--navy)}
+.entry form{display:grid;grid-template-columns:130px 130px 1fr 150px 110px auto;gap:8px;align-items:end}
+.entry label{display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--muted)}
+.entry input,.entry select{border:1px solid var(--line);border-radius:3px;padding:7px 8px;background:#fff}
+.entry input:focus,.entry select:focus,.filters input:focus,.filters select:focus{outline:2px solid var(--navy-2);outline-offset:0}
+.entry button{background:var(--navy);color:#fff;border:0;border-radius:3px;padding:8px 18px;cursor:pointer;font-weight:700}
+.entry button:hover{background:#0f1c40}
+.entry .hint{grid-column:1/-1;font-size:11px;color:var(--muted);margin:0}
+
+.filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+.filters input,.filters select{border:1px solid var(--line);border-radius:3px;padding:6px 8px;background:#fff}
+.filters input[type=search]{min-width:240px}
+.filters label{font-size:12px;color:var(--muted);display:flex;gap:5px;align-items:center}
+.filters .count{margin-left:auto;font-size:12px;color:var(--muted)}
+
+table{width:100%;table-layout:fixed;border-collapse:collapse;background:var(--paper);border:1px solid var(--line);font-size:12.5px}
+th{background:#fff;color:var(--navy);text-align:left;padding:8px 8px;border-bottom:2px solid var(--navy);font-size:12px;position:sticky;top:0;z-index:2}
+td{padding:4px 6px;border:1px solid var(--line);vertical-align:middle}
+tr.day td{background:var(--navy-2);color:#fff;font-weight:700;font-size:12px;padding:5px 8px}
+tr.day td .n{font-weight:400;opacity:.85;margin-left:8px}
+tr.task:nth-child(even) td{background:var(--stripe)}
+tr.task.overdue td{background:var(--red-bg);color:var(--red-fg)}
+tr.task.done td{background:var(--green-bg);color:var(--green-fg)}
+tr.task.prog td{background:var(--blue-bg);color:var(--blue-fg)}
+td.status,td.pri{padding:2px 3px;text-align:center}
+td select{width:100%;border:0;background:transparent;font-weight:700;text-align:center;padding:5px 2px;border-radius:3px;cursor:pointer}
+td select.s-ns{background:var(--med-bg);color:var(--med-fg)}
+td select.s-ip{background:var(--blue-bg);color:var(--blue-fg)}
+td select.s-c{background:var(--green-bg);color:var(--green-fg)}
+td select.p-critical{background:var(--red-bg);color:var(--red-fg)}
+td select.p-high{background:var(--hi-bg);color:var(--hi-fg)}
+td select.p-med{background:var(--med-bg);color:var(--med-fg)}
+td select.p-low{background:var(--low-bg);color:var(--low-fg)}
+td select.p-{background:transparent}
+td .edit{width:100%;min-width:0;border:0;background:transparent;padding:4px 2px;color:inherit}
+td .edit:focus{outline:2px solid var(--navy-2);background:#fff;color:var(--ink)}
+td.due input{width:118px}
+td.done-at{color:var(--muted);font-style:italic;font-size:11px;white-space:nowrap;background:transparent!important;border-color:transparent}
+td.del{width:28px;text-align:center;padding:0}
+td.del button{border:0;background:transparent;color:var(--muted);cursor:pointer;font-size:16px;line-height:1;padding:4px 6px;border-radius:3px}
+td.del button:hover{background:var(--red-bg);color:var(--red-fg)}
+.empty{padding:40px;text-align:center;color:var(--muted);background:var(--paper);border:1px solid var(--line)}
+.legend{margin-top:10px;font-size:11px;color:var(--muted);display:flex;gap:14px;flex-wrap:wrap}
+.legend i{display:inline-block;width:12px;height:12px;vertical-align:-2px;margin-right:4px;border:1px solid var(--line)}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--navy);color:#fff;padding:9px 16px;border-radius:4px;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.show{opacity:1}
+dialog{border:1px solid var(--line);border-top:4px solid var(--navy);border-radius:4px;padding:16px 18px;width:min(520px,92vw)}
+dialog h3{margin:0 0 8px;color:var(--navy);font-size:15px}
+dialog textarea{width:100%;min-height:150px;border:1px solid var(--line);padding:8px;font-family:Arial,sans-serif}
+dialog .row{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}
+dialog button{border:1px solid var(--line);background:#fff;border-radius:3px;padding:6px 12px;cursor:pointer}
+dialog button.primary{background:var(--navy);color:#fff;border-color:var(--navy)}
+@media (max-width:900px){
+  .entry form{grid-template-columns:1fr 1fr}
+  .entry form label:nth-child(3){grid-column:1/-1}
+  th.hide,td.hide{display:none}
+  .filters input[type=search]{min-width:0;flex:1}
+}
+@media (prefers-reduced-motion:reduce){.toast{transition:none}}
+</style>
+</head>
+<body>
+<header>
+  <h1>BWW Task Manager</h1>
+  <div class="stats">
+    <span><b id="stOpen">0</b>open</span>
+    <span class="warn"><b id="stOver">0</b>overdue</span>
+    <span><b id="stToday">0</b>due today</span>
+  </div>
+  <div class="tools">
+    <button id="btnLists" type="button">Lists</button>
+    <button id="btnExport" type="button">Export</button>
+    <button id="btnImport" type="button">Import</button>
+    <button id="btnCsv" type="button">CSV</button>
+  </div>
+</header>
+<main>
+  <section class="entry">
+    <h2>New task entry</h2>
+    <form id="entry" autocomplete="off">
+      <label>Project <input id="fProject" list="projList" placeholder="Job acronym" required></label>
+      <label>Assignee <input id="fAssignee" list="asgList" placeholder="Who"></label>
+      <label>Task <input id="fTask" placeholder="What needs to happen" required></label>
+      <label>Due date <input id="fDue" type="date"></label>
+      <label>Priority <select id="fPriority"><option value="">None</option><option>Critical</option><option selected>High</option><option>Med</option><option>Low</option></select></label>
+      <button type="submit">Add task</button>
+      <p class="hint">Dated today automatically. Enter adds the task.</p>
+    </form>
+    <datalist id="projList"></datalist>
+    <datalist id="asgList"></datalist>
+  </section>
+
+  <div class="filters">
+    <input id="q" type="search" placeholder="Search tasks, notes, projects">
+    <select id="fltProject"><option value="">All projects</option></select>
+    <select id="fltAssignee"><option value="">All assignees</option></select>
+    <select id="fltStatus">
+      <option value="open">Open only</option>
+      <option value="">Everything</option>
+      <option value="Not Started">Not started</option>
+      <option value="In Progress">In progress</option>
+      <option value="Completed">Completed</option>
+      <option value="overdue">Overdue</option>
+    </select>
+    <select id="fltPri"><option value="">Any priority</option><option>Critical</option><option>High</option><option>Med</option><option>Low</option></select>
+    <span class="count" id="count"></span>
+  </div>
+
+  <div id="tableWrap"></div>
+  <div class="legend">
+    <span><i style="background:var(--red-bg)"></i>Past due, not completed</span>
+    <span><i style="background:var(--green-bg)"></i>Completed</span>
+    <span><i style="background:var(--blue-bg)"></i>In progress</span>
+    <span>Date completed stamps itself when status is set to Completed</span>
+  </div>
+</main>
+
+<dialog id="dlgLists">
+  <h3>Projects and assignees</h3>
+  <p style="margin:0 0 6px;font-size:12px;color:var(--muted)">One per line. These feed the dropdowns. Anything typed into a task gets added automatically.</p>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+    <label style="font-size:12px">Projects<textarea id="txtProjects"></textarea></label>
+    <label style="font-size:12px">Assignees<textarea id="txtAssignees"></textarea></label>
+  </div>
+  <div class="row"><button type="button" id="listsCancel">Cancel</button><button type="button" class="primary" id="listsSave">Save lists</button></div>
+</dialog>
+
+<dialog id="dlgImport">
+  <h3>Import tasks</h3>
+  <p style="margin:0 0 6px;font-size:12px;color:var(--muted)">Paste a JSON export here. Choose whether to merge with or replace what's on screen.</p>
+  <textarea id="txtImport" placeholder='[{"task":"..."}]'></textarea>
+  <div class="row"><button type="button" id="impCancel">Cancel</button><button type="button" id="impMerge">Merge</button><button type="button" class="primary" id="impReplace">Replace all</button></div>
+</dialog>
+
+<div class="toast" id="toast"></div>
+<input type="file" id="fileIn" accept=".json" hidden>
+<script>
+const SEED=[{"id":1,"date":"2026-08-25","project":"TNLK","assignee":"","task":"Find out if they have paid retainage, let Donna know","due":"2026-08-25","notes":"","status":"Not Started","priority":"High","completed":null},{"id":2,"date":"2026-08-24","project":"RRCT","assignee":"","task":"Create MTO and tie tie to budget","due":"2026-08-25","notes":"","status":"Not Started","priority":"High","completed":null},{"id":3,"date":"2026-08-24","project":"RRCT","assignee":"","task":"Build MTO","due":"2026-08-24","notes":"","status":"Not Started","priority":"High","completed":null},{"id":4,"date":"2026-08-24","project":"RRCT","assignee":"","task":"Build Budget, send to Mike","due":"2026-08-24","notes":"","status":"Not Started","priority":"High","completed":null},{"id":5,"date":"2026-08-24","project":"RRCT","assignee":"","task":"Assign project and schedule hand off","due":"2026-08-24","notes":"","status":"Not Started","priority":"High","completed":null},{"id":6,"date":"2026-08-24","project":"TX16","assignee":"","task":"Follow up that Dalton has punch item 787 figured out and if we are on target to deliver added scope","due":"2026-08-27","notes":"","status":"Not Started","priority":"High","completed":null},{"id":7,"date":"2026-08-24","project":"SCRD","assignee":"","task":"Hand off to Cameron","due":"2026-08-24","notes":"","status":"Not Started","priority":"High","completed":null},{"id":8,"date":"2026-08-24","project":"SCRD","assignee":"","task":"Get Alex a bid proposal","due":"2026-08-24","notes":"","status":"Not Started","priority":"High","completed":null},{"id":9,"date":"2026-08-18","project":"CSMS","assignee":"","task":"Split solid surface from work orders","due":"2026-08-18","notes":"","status":"Not Started","priority":"High","completed":null},{"id":10,"date":"2026-08-18","project":"BUDA","assignee":"","task":"Create completion list for all active projects","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":11,"date":"2026-08-18","project":"BUDA","assignee":"","task":"Work on installation work orders for all projects","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":12,"date":"2026-08-18","project":"BUDA","assignee":"","task":"Reply to Kenny Perez, looking for install work","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":13,"date":"2026-08-18","project":"BUDA","assignee":"","task":"Make a workbook for Billings, revenue projections and financials","due":null,"notes":"","status":"Not Started","priority":"Critical","completed":null},{"id":14,"date":"2026-08-18","project":"BUDA","assignee":"","task":"Send out fake bids to have installers quote","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":15,"date":"2026-08-17","project":"BUDA","assignee":"","task":"Introduce \"Tags\" in shop Drawings","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":16,"date":"2026-08-17","project":"BUDA","assignee":"","task":"Get all budgets run through claude to extract codes to send to mike.","due":"2026-08-21","notes":"","status":"Not Started","priority":"High","completed":null},{"id":17,"date":"2026-08-17","project":"TX16","assignee":"","task":"Have dalton look into punch items","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":18,"date":"2026-08-17","project":"BUDA","assignee":"","task":"Add panel take off to MTO","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":19,"date":"2026-08-17","project":"BUDA","assignee":"","task":"Update AR","due":null,"notes":"","status":"Completed","priority":"Critical","completed":"2026-08-17T12:17:14"},{"id":20,"date":"2026-08-17","project":"BUDA","assignee":"","task":"Book Flight","due":"2026-08-17","notes":"","status":"Completed","priority":"Critical","completed":"2026-08-17T11:42:24"},{"id":21,"date":"2026-08-14","project":"CSMS","assignee":"","task":"Let Royal know about the 7 trash units on back order till sept 23rd, check Donna email","due":null,"notes":"They are not back order anymore","status":"Completed","priority":"High","completed":"2026-08-17T12:17:38"},{"id":22,"date":"2026-08-12","project":"BUDA","assignee":"","task":"Add panel take off tab to MTO sheet.","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":23,"date":"2026-08-12","project":"KLWL","assignee":"","task":"Retainage, find out when will receive, Let Miguel from Hutto know","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":24,"date":"2026-08-12","project":"BUDA","assignee":"","task":"Add a step in innergy for \"MV-Specs\". Also add a tab to separate sheet count on MTO by area reports.","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":25,"date":"2026-08-11","project":"CSMS","assignee":"","task":"Send Alyson material cost","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":26,"date":"2026-08-06","project":"FHHQ","assignee":"","task":"Drawings need to be uploaded & ensure work orders are broken up.","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":27,"date":"2026-08-03","project":"BUDA","assignee":"","task":"Work on a view that shows what work all subs are working on. Stone , Fabric and install","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":28,"date":"2026-08-03","project":"Stone Source","assignee":"","task":"Update installation pricing.","due":"2026-08-03","notes":"","status":"Not Started","priority":"High","completed":null},{"id":29,"date":"2026-08-03","project":"BUDA","assignee":"","task":"Look into september work load and ensure the dates are correct. Get back to bob with report","due":"2026-08-03","notes":"","status":"Not Started","priority":"High","completed":null},{"id":30,"date":"2026-08-03","project":"NFMT","assignee":"","task":"Load shop drawings in to Innergy","due":null,"notes":"","status":"Not Started","priority":"Med","completed":null},{"id":31,"date":"2026-08-03","project":"BUDA","assignee":"","task":"Find out if we arew going to Innergy summit in Atlanta","due":null,"notes":"","status":"Not Started","priority":"Med","completed":null},{"id":32,"date":"2026-07-31","project":"FHHQ","assignee":"","task":"Talk with Albert, tight","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":33,"date":"2026-07-31","project":"OSPR","assignee":"","task":"Ask Jeff about COR003 Redline change","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":34,"date":"2026-07-31","project":"BUDA","assignee":"","task":"Create a master list class.","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":35,"date":"2026-07-31","project":"RDMD","assignee":"","task":"Get with Doug on COR002, should be 1000 less","due":null,"notes":"","status":"Not Started","priority":"Med","completed":null},{"id":36,"date":"2026-07-30","project":"MRKR","assignee":"","task":"Look into Paycom and if job has been input for clock in","due":"2026-07-30","notes":"","status":"Not Started","priority":"Critical","completed":null},{"id":37,"date":"2026-07-28","project":"BUDA","assignee":"","task":"Work on a quality plan for all plans (CSAT &QOKS)","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":38,"date":"2026-07-27","project":"TXSD","assignee":"","task":"Get with Jonathan about 3 samples requested. He needs to bring in material and make work order","due":null,"notes":"","status":"Not Started","priority":"Med","completed":null},{"id":39,"date":"2026-07-27","project":"BUDA","assignee":"","task":"Finish building roles and Resposibilities for Mike and senior role","due":"2026-07-31","notes":"","status":"Not Started","priority":"High","completed":null},{"id":40,"date":"2026-07-24","project":"QOKS","assignee":"","task":"Check and see if Bob signed contract or needs help","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":41,"date":"2026-07-23","project":"Northwest","assignee":"","task":"Send project scheduler","due":"2026-07-23","notes":"","status":"Not Started","priority":"High","completed":null},{"id":42,"date":"2026-07-23","project":"Cedar Park","assignee":"","task":"Send out details fro quotes onstair railing","due":"2026-07-23","notes":"","status":"Not Started","priority":"High","completed":null},{"id":43,"date":"2026-07-22","project":"Stone Collection","assignee":"","task":"Get Alex a price for plywood substraight","due":"2026-07-22","notes":"","status":"Not Started","priority":"High","completed":null},{"id":44,"date":"2026-07-22","project":"RLSW","assignee":"","task":"Review all data and compile an email to reject back charge","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":45,"date":"2026-07-13","project":"ASMC","assignee":"","task":"Follow up on change order. Tell Dalton","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":46,"date":"2026-07-13","project":"BUDA","assignee":"","task":"Purchase Humidity sensors","due":null,"notes":"","status":"Not Started","priority":"","completed":null},{"id":47,"date":"2026-07-13","project":"BUDA","assignee":"","task":"Make sure GTO CO is in files","due":null,"notes":"","status":"Not Started","priority":"Med","completed":null},{"id":48,"date":"2026-07-13","project":"TX16","assignee":"","task":"Add deducted change order Alyson emailed about","due":null,"notes":"","status":"Not Started","priority":"","completed":null},{"id":49,"date":"2026-07-13","project":"BUDA","assignee":"","task":"Update quility checklist pertaining to the 2\" x 2\" required in upper. Only if QCP would it require lower screws","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":50,"date":"2026-07-13","project":"BUDA","assignee":"","task":"T&M ticket refinment, get with Daniel","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":51,"date":"2026-07-13","project":"WJJC","assignee":"","task":"Talk with Mike about FR cores and how we should us FRPB","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":52,"date":"2026-07-13","project":"QOKS","assignee":"","task":"Review new project and set up hand off","due":null,"notes":"","status":"Not Started","priority":"Critical","completed":null},{"id":53,"date":"2026-07-13","project":"UTSA","assignee":"","task":"Talk with Mike about an email sent from Derek Dobbins on CO12","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":54,"date":"2026-07-13","project":"BUDA","assignee":"","task":"Send Sean from NW an email with production schedule","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":55,"date":"2026-07-13","project":"BUDA","assignee":"","task":"Update work flows on innergy","due":null,"notes":"","status":"Not Started","priority":"Critical","completed":null},{"id":56,"date":"2026-07-13","project":"BUDA","assignee":"","task":"Make a Change order view that shows all accepted CO's that need GC CO. Email team on View","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":57,"date":"2026-07-13","project":"TX16","assignee":"","task":"Follow up with Dalton and make sure he is talking with Misael on adds","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":58,"date":"2026-07-13","project":"BUDA","assignee":"","task":"Make an SOV worksheet team can use to project billing. Labor & material by location","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":59,"date":"2026-07-13","project":"KLWL","assignee":"","task":"Set up installation for door pulls. Find out if we need to install both","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":60,"date":"2026-07-13","project":"RAND","assignee":"","task":"Get Alex pricing for items he sent over. Talk with Doug","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":61,"date":"2026-07-13","project":"BUDA","assignee":"","task":"Talk with Bob about Raken status. See what price is","due":null,"notes":"","status":"Not Started","priority":"Med","completed":null},{"id":62,"date":"2026-07-13","project":"BUDA","assignee":"","task":"Make a budget sheet for each project. Need for PM & accounting","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":63,"date":"2026-07-13","project":"BUDA","assignee":"","task":"Make single install work orders for all acrive projects","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":64,"date":"2026-07-01","project":"MOSP","assignee":"","task":"Review new job and set up hand off","due":"2026-07-02","notes":"","status":"Not Started","priority":"High","completed":null},{"id":65,"date":"2026-07-01","project":"BUDA","assignee":"","task":"Transfer all data from Innergy to Mike Bristow forms","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":66,"date":"2026-06-29","project":"TSFD","assignee":"","task":"Look into sub requirments (wages)","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":67,"date":"2026-06-22","project":"BUDA","assignee":"","task":"Quality Plan","due":null,"notes":"","status":"Not Started","priority":"Med","completed":null},{"id":68,"date":"2026-06-22","project":"KLWL","assignee":"","task":"Order 2 pulls, send them change order","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":69,"date":"2026-06-19","project":"PVIP","assignee":"","task":"Talk with Bob and Jeff about proposal","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":70,"date":"2026-06-19","project":"ARCB","assignee":"","task":"Create a template sketch to route slats. Give to Albert","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":71,"date":"2026-06-19","project":"CSK5","assignee":"","task":"Call Zack back about benches","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":72,"date":"2026-06-19","project":"CSK5","assignee":"","task":"Send Nail-It an updated Work Authorization","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":73,"date":"2026-06-19","project":"ASMC","assignee":"","task":"Send Bernardino an upadated Work Order","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":74,"date":"2026-06-19","project":"BUDA","assignee":"","task":"Look Over what Whitney sent you from Izzy","due":null,"notes":"","status":"Not Started","priority":"Med","completed":null},{"id":75,"date":"2026-06-17","project":"BUDA","assignee":"","task":"Work on projecting all schedules on every project","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":76,"date":"2026-06-17","project":"BUDA","assignee":"","task":"Update sample tracker to have a procurment gant chart","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":77,"date":"2026-06-16","project":"BUDA","assignee":"","task":"Update Finish sample process","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":78,"date":"2026-06-16","project":"EHRH","assignee":"","task":"Do a take off on fabric panels","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":79,"date":"2026-06-16","project":"JWMarriott","assignee":"","task":"Send Moses a take off","due":null,"notes":"","status":"Not Started","priority":"Critical","completed":null},{"id":80,"date":"2026-06-15","project":"VBHH","assignee":"","task":"Set up hand off with PM for new project","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":81,"date":"2026-06-12","project":"BUDA","assignee":"","task":"Write an explination for project steps","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":82,"date":"2026-06-12","project":"BUDA","assignee":"","task":"Email engineering team about needs from Pm's","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":83,"date":"2026-06-11","project":"BUDA","assignee":"","task":"On Site Contact? This field is for shippment items, can it be changes to be outside of GC contacts","due":null,"notes":"","status":"Not Started","priority":"Med","completed":null},{"id":84,"date":"2026-06-11","project":"GASC","assignee":"","task":"Schedule hinge clips to be installed next week","due":null,"notes":"I asked Daniel if his guys could do it","status":"In Progress","priority":"High","completed":null},{"id":85,"date":"2026-06-11","project":"EHRH","assignee":"","task":"Review PR-03 and get to estimating or Divian","due":null,"notes":"I reviewed and no millwork in PR03","status":"Completed","priority":"Med","completed":"2026-06-11T15:20:50"},{"id":86,"date":"2026-06-11","project":"BUDA","assignee":"","task":"Make a complete proceess chart. Need to show Interns","due":null,"notes":"","status":"Not Started","priority":"Med","completed":null},{"id":87,"date":"2026-06-11","project":"BUDA","assignee":"","task":"Create install standards and send to all subs","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":88,"date":"2026-06-10","project":"BUDA","assignee":"","task":"Talk witth Bob about Linbeck lunch for intern","due":null,"notes":"I need to build a process sheet","status":"Completed","priority":"Med","completed":"2026-06-11T15:23:14"},{"id":89,"date":"2026-06-10","project":"USAC","assignee":"","task":"Send Northwest an email about shipping cost","due":null,"notes":"I told Bob, he said he would bring it up","status":"Completed","priority":"High","completed":"2026-06-11T15:23:29"},{"id":90,"date":"2026-06-09","project":"KLWL","assignee":"","task":"Follow up with Tyler to see about added doors","due":null,"notes":"Sent him email","status":"In Progress","priority":"Med","completed":null},{"id":91,"date":"2026-06-08","project":"BUDA","assignee":"","task":"Work on updating sample tracker with auto label generator","due":null,"notes":"","status":"Not Started","priority":"Med","completed":null},{"id":92,"date":"2026-06-08","project":"BUDA","assignee":"","task":"Get Dalton to update project status","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":93,"date":"2026-06-04","project":"BUDA","assignee":"","task":"List Job posting for delivery and receiving","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":94,"date":"2026-06-04","project":"BUDA","assignee":"","task":"Get Whitney what she needs from Raul for installation","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":95,"date":"2026-06-04","project":"TX16","assignee":"","task":"Get Panel into production fro Friday. Get them pricing asap.","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":96,"date":"2026-06-04","project":"CSK5","assignee":"","task":"Cut down doors 1/8\" off top and move hinge cup. Install locks 40\" Center - 5/8 to center Right Door. Also 1 tube of color caulk that matches doors. Add other damaged doors","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":97,"date":"2026-06-04","project":"GASC","assignee":"","task":"Get a price from Bernardino for drawer slides, set up fro Friday install","due":null,"notes":"","status":"Not Started","priority":"Critical","completed":null},{"id":98,"date":"2026-06-03","project":"CSK5","assignee":"","task":"Get Mike from nail it a new WA for added scope","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":99,"date":"2026-06-03","project":"CSK5","assignee":"","task":"Create work order to cut science room doors and hinges on tall cabinets","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":100,"date":"2026-06-01","project":"ASMC","assignee":"","task":"Look into ASI countertops Nick is talking about","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":101,"date":"2026-06-01","project":"GASC","assignee":"","task":"Keith will check slide thickness then I need to order 12 pairs","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":102,"date":"2026-06-01","project":"BUDA","assignee":"","task":"Review WHIP material","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":103,"date":"2026-06-01","project":"CSK5","assignee":"","task":"Make a work order for new doors","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":104,"date":"2026-06-01","project":"GASC","assignee":"","task":"12 File drawers need to be soft close. Look at finding soft close hardware to replace","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":105,"date":"2026-06-01","project":"GASC","assignee":"","task":"Make sure Dalton emails final docs","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":106,"date":"2026-06-01","project":"GASC","assignee":"","task":"Get file bars delivered","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":107,"date":"2026-05-29","project":"WJJC","assignee":"","task":"Build panel take off for court room","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":108,"date":"2026-05-29","project":"WJJC","assignee":"","task":"Talk with mike about quotes and compare","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":109,"date":"2026-05-28","project":"BUDA","assignee":"","task":"Get PM's to update innergy with Awarded Sub Installer","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":110,"date":"2026-05-28","project":"USAC","assignee":"","task":"Look at ordering trim for Global soffit","due":null,"notes":"","status":"Not Started","priority":"","completed":null},{"id":111,"date":"2026-05-28","project":"USAC","assignee":"","task":"Talk with pete about templates. Kitchen global & Salad bar","due":null,"notes":"","status":"Not Started","priority":"","completed":null},{"id":112,"date":"2026-05-28","project":"CSK5","assignee":"","task":"Add to shipping for Tuesday","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":113,"date":"2026-05-28","project":"CSK5","assignee":"","task":"Grommets - need 4 for reception. Pulls, locks and catches","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":114,"date":"2026-05-28","project":"TX16","assignee":"","task":"Send Miguel a updated WA showing back charges","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":115,"date":"2026-05-27","project":"TX16","assignee":"","task":"Set up delivery for Monday on pulls and coordinate with GC & Miguel","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":116,"date":"2026-05-27","project":"GCLC","assignee":"","task":"Get Bernadino an updated Work Authorization","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":117,"date":"2026-05-27","project":"GASC","assignee":"","task":"Look into hing stops for patient bay door stops. Get Josh pricing","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":118,"date":"2026-05-27","project":"INNERGY","assignee":"","task":"Review Innergy Assessment and make a plan from Jessica","due":null,"notes":"","status":"Not Started","priority":"","completed":null},{"id":119,"date":"2026-05-27","project":"INNERGY","assignee":"","task":"Create a change order Kanban that matches real world","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":120,"date":"2026-05-27","project":"BUDA","assignee":"","task":"Create a work order checklist","due":null,"notes":"","status":"Not Started","priority":"Critical","completed":null},{"id":121,"date":"2026-05-27","project":"BUDA","assignee":"","task":"Make a packge we can send installers so they know what we require","due":"2026-05-27","notes":"","status":"Not Started","priority":"Critical","completed":null},{"id":122,"date":"2026-05-27","project":"CSK5","assignee":"","task":"Look into missing elevation at library","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":123,"date":"2026-05-27","project":"ASMC","assignee":"","task":"Send Bernadino Drawings of pencile drawer","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":124,"date":"2026-05-22","project":"BUDA","assignee":"","task":"Reach out to Lobo Woodwork for install. Daniel sent email","due":null,"notes":"Sent them our requirments","status":"Completed","priority":"High","completed":"2026-06-12T10:42:19"},{"id":125,"date":"2026-05-22","project":"KLWL","assignee":"","task":"Wednesday delivery, TV Cart & Shroud.","due":"2026-05-22","notes":"","status":"Not Started","priority":"High","completed":null},{"id":126,"date":"2026-05-22","project":"CSK5","assignee":"","task":"Make sure you send a copy of executed change order to Alyson and Bob","due":"2026-05-26","notes":"","status":"Not Started","priority":"Critical","completed":null},{"id":127,"date":"2026-05-22","project":"BUDA","assignee":"","task":"Get donna to get you pricing","due":null,"notes":"","status":"Not Started","priority":"Med","completed":null},{"id":128,"date":"2026-05-22","project":"BUDA","assignee":"","task":"Set Up meetings for Tru craft interview","due":null,"notes":"","status":"Completed","priority":"High","completed":"2026-06-12T10:41:59"},{"id":129,"date":"2026-05-22","project":"GASC","assignee":"","task":"Review punchlist and make sure we fabe everything we need to set up installers","due":"2026-05-22","notes":"","status":"Not Started","priority":"High","completed":null},{"id":130,"date":"2026-05-21","project":"TX16","assignee":"","task":"Get Misael the approval on paint backcharge","due":"2026-05-22","notes":"We are backcharging Miguel","status":"Completed","priority":"High","completed":"2026-05-28T14:58:49"},{"id":131,"date":"2026-05-21","project":"TX16","assignee":"","task":"Email Misael cost of new pulls and details on why","due":null,"notes":"","status":"Completed","priority":"High","completed":"2026-05-28T14:58:44"},{"id":132,"date":"2026-05-21","project":"BVET","assignee":"","task":"Call Rob Amoroso with Buda Veterinary Clinic","due":null,"notes":"Sent Dalton to call and find out","status":"Completed","priority":"Med","completed":"2026-05-28T14:58:27"},{"id":133,"date":"2026-05-21","project":"BUDA","assignee":"","task":"Work on COR's on work authorizations","due":null,"notes":"","status":"Completed","priority":"Med","completed":"2026-06-12T10:41:52"},{"id":134,"date":"2026-05-21","project":"BUDA","assignee":"","task":"Make a rule that all T&M must be billed separate from contract. There must also be back up showing hours per employee","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":135,"date":"2026-05-21","project":"PVIP","assignee":"","task":"Talk with Bob about Montbleau and if we are to proceed as if we have project","due":null,"notes":"Bob had said to proceed","status":"Completed","priority":"High","completed":"2026-05-28T10:33:30"},{"id":136,"date":"2026-05-21","project":"GCLC","assignee":"","task":"Create delivery on calendar today","due":"2026-05-21","notes":"","status":"Completed","priority":"Critical","completed":"2026-05-28T10:33:14"},{"id":137,"date":"2026-05-21","project":"GCLC","assignee":"","task":"Order more material for warranty work","due":null,"notes":"","status":"Completed","priority":"Critical","completed":"2026-05-28T10:33:09"},{"id":138,"date":"2026-05-21","project":"GASC","assignee":"","task":"Check if drawers were to be soft close","due":null,"notes":"No they were not","status":"Completed","priority":"High","completed":"2026-05-28T10:33:00"},{"id":139,"date":"2026-05-21","project":"BUDA","assignee":"","task":"Email 2 install companies and see if they can meet our requirements to onboard","due":null,"notes":"We need to send them work","status":"Completed","priority":"High","completed":"2026-06-11T15:20:00"},{"id":140,"date":"2026-05-20","project":"CSK5","assignee":"","task":"Have Donna purchase more prime trim for add","due":null,"notes":"Bob said we have enough on site","status":"Completed","priority":"High","completed":"2026-05-21T08:29:18"},{"id":141,"date":"2026-05-20","project":"CSK5","assignee":"","task":"Get prices from nail it on adds","due":null,"notes":"He just sent me librart","status":"In Progress","priority":"High","completed":null},{"id":142,"date":"2026-05-20","project":"CSK5","assignee":"","task":"Notify Mike that he may proceed on added trim, but need quote.","due":null,"notes":"Sent email, awaiting response","status":"Completed","priority":"High","completed":"2026-05-21T08:28:59"},{"id":143,"date":"2026-05-20","project":"OMNI","assignee":"","task":"Get back to Kathleen Sekula on refinishing tops","due":null,"notes":"I asked her for info so we could price to do internaly","status":"Completed","priority":"Med","completed":"2026-06-02T16:09:23"},{"id":144,"date":"2026-05-20","project":"BUDA","assignee":"","task":"Do Archline survey","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":145,"date":"2026-05-20","project":"BUDA","assignee":"","task":"Send Daniel an update about Task durations I gave PM's","due":null,"notes":"","status":"Completed","priority":"High","completed":"2026-05-21T08:28:03"},{"id":146,"date":"2026-05-20","project":"BUDA","assignee":"","task":"Look into field software for installers or make one","due":null,"notes":"We are going to use Raken","status":"Completed","priority":"Med","completed":"2026-05-27T09:55:39"},{"id":147,"date":"2026-05-20","project":"INNERGY","assignee":"","task":"Create a view for current PM task","due":null,"notes":"","status":"Completed","priority":"Med","completed":"2026-06-11T15:19:47"},{"id":148,"date":"2026-05-20","project":"ASMC","assignee":"","task":"Send Bernadino an updated WA","due":null,"notes":"Sent, need to sign when returned","status":"Completed","priority":"High","completed":"2026-05-21T08:27:56"},{"id":149,"date":"2026-05-20","project":"TX16","assignee":"","task":"Send Misael change order for new pulls","due":null,"notes":"","status":"Completed","priority":"High","completed":"2026-05-21T08:27:52"},{"id":150,"date":"2026-05-20","project":"TX16","assignee":"","task":"Create a change order request for new pulls","due":null,"notes":"Sent a task to Jeff & Doug","status":"Completed","priority":"High","completed":"2026-05-21T08:27:39"},{"id":151,"date":"2026-05-20","project":"ASMC","assignee":"","task":"Email Hunter change orders for trim and drawer add","due":null,"notes":"Sent info to Doug. Douge sent back","status":"Completed","priority":"High","completed":"2026-05-20T15:19:25"}];
+// ---------- storage (works when hosted; falls back to memory in previews) ----------
+const KEY='bww_tasks_v1', LKEY='bww_lists_v1';
+const store={
+  get(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}},
+  set(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true}catch(e){return false}}
+};
+const STATUS=['Not Started','In Progress','Completed'];
+const PRI=['','Critical','High','Med','Low'];
+
+let tasks = store.get(KEY) || SEED.map(t=>({...t}));
+let lists = store.get(LKEY) || {projects:[],assignees:[]};
+let nextId = tasks.reduce((m,t)=>Math.max(m,t.id||0),0)+1;
+
+// ---------- helpers ----------
+const $=s=>document.querySelector(s);
+const todayISO=()=>{const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-')};
+const DOW=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+function fmtDay(iso){if(!iso)return'';const [y,m,d]=iso.split('-').map(Number);const dt=new Date(y,m-1,d);return `${m}/${d}/${String(y).slice(2)} ${DOW[dt.getDay()]}`}
+function fmtStamp(iso){if(!iso)return'';const d=new Date(iso);let h=d.getHours(),ap=h>=12?'PM':'AM';h=h%12||12;return `${d.getMonth()+1}/${d.getDate()}/${String(d.getFullYear()).slice(2)} ${h}:${String(d.getMinutes()).padStart(2,'0')} ${ap}`}
+function localNowISO(){const d=new Date();const p=n=>String(n).padStart(2,'0');return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`}
+const isOverdue=t=>t.due && t.status!=='Completed' && t.due<todayISO();
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function save(){const ok=store.set(KEY,tasks)&&store.set(LKEY,lists);if(!ok&&!save.warned){save.warned=true;toast('Preview mode: changes stay until you close this page. Host the file to keep them.')}}
+let toastT;function toast(m){const el=$('#toast');el.textContent=m;el.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove('show'),2600)}
+
+function allProjects(){const s=new Set(lists.projects);tasks.forEach(t=>t.project&&s.add(t.project));return [...s].sort((a,b)=>a.localeCompare(b,undefined,{sensitivity:'base'}))}
+function allAssignees(){const s=new Set(lists.assignees);tasks.forEach(t=>t.assignee&&s.add(t.assignee));return [...s].sort((a,b)=>a.localeCompare(b,undefined,{sensitivity:'base'}))}
+function fillLists(){
+  const p=allProjects(),a=allAssignees();
+  $('#projList').innerHTML=p.map(x=>`<option value="${esc(x)}">`).join('');
+  $('#asgList').innerHTML=a.map(x=>`<option value="${esc(x)}">`).join('');
+  const keepP=$('#fltProject').value,keepA=$('#fltAssignee').value;
+  $('#fltProject').innerHTML='<option value="">All projects</option>'+p.map(x=>`<option>${esc(x)}</option>`).join('');
+  $('#fltAssignee').innerHTML='<option value="">All assignees</option>'+a.map(x=>`<option>${esc(x)}</option>`).join('');
+  $('#fltProject').value=keepP;$('#fltAssignee').value=keepA;
+}
+
+// ---------- render ----------
+function render(){
+  fillLists();
+  const q=$('#q').value.trim().toLowerCase(), fp=$('#fltProject').value, fa=$('#fltAssignee').value, fs=$('#fltStatus').value, fpri=$('#fltPri').value;
+  const today=todayISO();
+  let open=0,over=0,dueToday=0;
+  tasks.forEach(t=>{if(t.status!=='Completed'){open++;if(isOverdue(t))over++;if(t.due===today)dueToday++}});
+  $('#stOpen').textContent=open;$('#stOver').textContent=over;$('#stToday').textContent=dueToday;
+
+  const rows=tasks.filter(t=>{
+    if(fp&&t.project!==fp)return false;
+    if(fa&&t.assignee!==fa)return false;
+    if(fpri&&t.priority!==fpri)return false;
+    if(fs==='open'&&t.status==='Completed')return false;
+    if(fs==='overdue'&&!isOverdue(t))return false;
+    if(STATUS.includes(fs)&&t.status!==fs)return false;
+    if(q&&!(`${t.task} ${t.notes} ${t.project} ${t.assignee}`.toLowerCase().includes(q)))return false;
+    return true;
+  }).sort((a,b)=> b.date.localeCompare(a.date) || b.id-a.id);
+  $('#count').textContent=`${rows.length} of ${tasks.length} tasks`;
+
+  if(!rows.length){$('#tableWrap').innerHTML='<div class="empty">No tasks match. Add one above or clear the filters.</div>';return}
+  let html=`<table><colgroup><col style="width:88px"><col style="width:95px"><col style="width:115px"><col><col style="width:140px"><col style="width:230px"><col style="width:112px"><col style="width:92px"><col style="width:118px"><col style="width:28px"></colgroup><thead><tr><th>Date</th><th>Project</th><th class="hide">Assignee</th><th>Task</th><th>Due</th><th class="hide">Notes</th><th>Status</th><th>Priority</th><th class="hide">Date completed</th><th></th></tr></thead><tbody>`;
+  let lastDay=null;
+  rows.forEach(t=>{
+    if(t.date!==lastDay){lastDay=t.date;const n=rows.filter(r=>r.date===t.date).length;html+=`<tr class="day"><td colspan="10">${fmtDay(t.date)}<span class="n">${n} task${n>1?'s':''}</span></td></tr>`}
+    const cls=t.status==='Completed'?'done':t.status==='In Progress'?'prog':isOverdue(t)?'overdue':'';
+    const sCls=t.status==='Completed'?'s-c':t.status==='In Progress'?'s-ip':'s-ns';
+    html+=`<tr class="task ${cls}" data-id="${t.id}">
+      <td style="white-space:nowrap">${fmtDay(t.date)}</td>
+      <td><input class="edit" data-f="project" value="${esc(t.project)}" list="projList"></td>
+      <td class="hide"><input class="edit" data-f="assignee" value="${esc(t.assignee)}" list="asgList"></td>
+      <td><input class="edit" data-f="task" value="${esc(t.task)}"></td>
+      <td class="due"><input class="edit" type="date" data-f="due" value="${t.due||''}"></td>
+      <td class="hide"><input class="edit" data-f="notes" value="${esc(t.notes)}" placeholder="Notes"></td>
+      <td class="status"><select data-f="status" class="${sCls}">${STATUS.map(s=>`<option ${s===t.status?'selected':''}>${s}</option>`).join('')}</select></td>
+      <td class="pri"><select data-f="priority" class="p-${(t.priority||'').toLowerCase()}">${PRI.map(p=>`<option value="${p}" ${p===t.priority?'selected':''}>${p||'None'}</option>`).join('')}</select></td>
+      <td class="hide done-at">${fmtStamp(t.completed)}</td>
+      <td class="del"><button type="button" title="Delete task" aria-label="Delete task">×</button></td>
+    </tr>`;
+  });
+  $('#tableWrap').innerHTML=html+'</tbody></table>';
+}
+
+// ---------- events ----------
+$('#entry').addEventListener('submit',e=>{
+  e.preventDefault();
+  const project=$('#fProject').value.trim(),task=$('#fTask').value.trim();
+  if(!project||!task){toast('Fill in Project and Task before adding.');return}
+  tasks.unshift({id:nextId++,date:todayISO(),project,assignee:$('#fAssignee').value.trim(),task,due:$('#fDue').value||null,notes:'',status:'Not Started',priority:$('#fPriority').value,completed:null});
+  save();
+  ['#fProject','#fAssignee','#fTask','#fDue'].forEach(s=>$(s).value='');
+  $('#fPriority').value='High';
+  render();$('#fProject').focus();toast('Task added');
+});
+['#q','#fltProject','#fltAssignee','#fltStatus','#fltPri'].forEach(s=>$(s).addEventListener('input',render));
+
+$('#tableWrap').addEventListener('change',e=>{
+  const tr=e.target.closest('tr.task');if(!tr)return;
+  const t=tasks.find(x=>x.id==tr.dataset.id);const f=e.target.dataset.f;if(!t||!f)return;
+  let v=e.target.value;
+  if(f==='due')v=v||null; else if(f!=='status'&&f!=='priority')v=v.trim();
+  t[f]=v;
+  if(f==='status'){ if(v==='Completed'){if(!t.completed)t.completed=localNowISO()} else t.completed=null }
+  save();render();
+});
+$('#tableWrap').addEventListener('click',e=>{
+  const b=e.target.closest('td.del button');if(!b)return;
+  const tr=b.closest('tr.task');const t=tasks.find(x=>x.id==tr.dataset.id);
+  if(confirm(`Delete this task?\n\n${t.project}: ${t.task}`)){tasks=tasks.filter(x=>x!==t);save();render();toast('Task deleted')}
+});
+$('#tableWrap').addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.classList.contains('edit')){e.target.blur()}});
+
+// lists dialog
+$('#btnLists').onclick=()=>{$('#txtProjects').value=allProjects().join('\n');$('#txtAssignees').value=allAssignees().join('\n');$('#dlgLists').showModal()};
+$('#listsCancel').onclick=()=>$('#dlgLists').close();
+$('#listsSave').onclick=()=>{const split=s=>[...new Set(s.split('\n').map(x=>x.trim()).filter(Boolean))];lists={projects:split($('#txtProjects').value),assignees:split($('#txtAssignees').value)};save();$('#dlgLists').close();render();toast('Lists saved')};
+
+// export / import
+function download(name,text,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),500)}
+$('#btnExport').onclick=()=>{download(`bww-tasks-${todayISO()}.json`,JSON.stringify({tasks,lists},null,1),'application/json');toast('Backup downloaded')};
+$('#btnCsv').onclick=()=>{
+  const cols=['date','project','assignee','task','due','notes','status','priority','completed'];
+  const cell=v=>`"${String(v??'').replace(/"/g,'""')}"`;
+  const csv=[['Date','Project','Assignee','Task','Due Date','Notes','Status','Priority','Date completed'].map(cell).join(',')]
+    .concat(tasks.map(t=>cols.map(c=>cell(c==='date'?fmtDay(t.date):c==='due'?fmtDay(t.due):c==='completed'?fmtStamp(t.completed):t[c])).join(','))).join('\r\n');
+  download(`bww-tasks-${todayISO()}.csv`,csv,'text/csv');toast('CSV downloaded');
+};
+$('#btnImport').onclick=()=>{$('#txtImport').value='';$('#dlgImport').showModal()};
+$('#impCancel').onclick=()=>$('#dlgImport').close();
+function doImport(replace){
+  let data;try{data=JSON.parse($('#txtImport').value)}catch(e){toast('That is not valid JSON.');return}
+  const inTasks=Array.isArray(data)?data:(data.tasks||[]);
+  if(!inTasks.length){toast('No tasks found in that text.');return}
+  const clean=inTasks.filter(t=>t&&t.task).map(t=>({id:nextId++,date:t.date||todayISO(),project:t.project||'',assignee:t.assignee||'',task:t.task,due:t.due||null,notes:t.notes||'',status:STATUS.includes(t.status)?t.status:'Not Started',priority:PRI.includes(t.priority)?t.priority:'',completed:t.completed||null}));
+  tasks=replace?clean:clean.concat(tasks);
+  if(data.lists)lists=data.lists;
+  save();$('#dlgImport').close();render();toast(`${clean.length} tasks imported`);
+}
+$('#impMerge').onclick=()=>doImport(false);
+$('#impReplace').onclick=()=>{if(confirm('Replace every task on screen with the imported list?'))doImport(true)};
+
+// keyboard: "n" jumps to new task
+document.addEventListener('keydown',e=>{if(e.key==='n'&&!/input|select|textarea/i.test(e.target.tagName)){e.preventDefault();$('#fProject').focus()}});
+
+render();
+</script>
+</body>
+</html>
