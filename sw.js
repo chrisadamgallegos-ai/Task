@@ -1,5 +1,5 @@
 // Caches the app so it opens with no signal. Bump CACHE when you deploy a new version.
-const CACHE = 'bww-tasks-v8';
+const CACHE = 'bww-tasks-v9';
 const FILES = ['./', './index.html', './manifest.json', './icon.svg', './icon-192.png', './icon-512.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES))); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k))))); self.clients.claim(); });

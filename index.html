@@ -175,6 +175,9 @@ tr.task.isnew td{font-weight:700}
 .updbar{position:fixed;left:0;right:0;bottom:0;background:var(--navy);color:#fff;padding:11px 14px;display:none;align-items:center;gap:12px;z-index:40;font-size:13px}
 .updbar button{background:#fff;color:var(--navy);border:0;border-radius:4px;padding:7px 14px;font-weight:700;cursor:pointer}
 .updbar .later{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.5);font-weight:400}
+.expandbox{position:fixed;z-index:60;background:#fff;border:2px solid var(--navy-2);border-radius:4px;padding:7px 9px;font:13px/1.45 Arial,Helvetica,sans-serif;color:var(--ink);box-shadow:0 6px 20px rgba(0,0,0,.25);resize:vertical;min-height:54px;overflow:auto}
+.expandbox:focus{outline:none}
+.expandhint{position:fixed;z-index:60;font-size:10.5px;color:#fff;background:var(--navy);padding:2px 7px;border-radius:0 0 3px 3px}
 .fbtn{background:#fff;border:1px solid var(--line);border-radius:3px;padding:6px 10px;font-size:12px;cursor:pointer}
 #dlgTask label{display:block;font-size:11px;color:var(--muted);margin-bottom:9px}
 #dlgTask input,#dlgTask select,#dlgTask textarea{width:100%;border:1px solid var(--line);border-radius:4px;padding:9px;margin-top:3px;font-size:15px;background:#fff}
@@ -351,7 +354,7 @@ const FIREBASE_CONFIG = {
   projectId:  "buda-ar",
   appId:      "1:953040503874:web:6eb280d36703a194eed9db"
 };
-const APP_VERSION = "v8";
+const APP_VERSION = "v9";
 const ADMIN_EMAILS = ["chrisg@budawoodworks.com"];
 // Who can use the task manager. Must match the taskUser() list in the
 // Firestore rules. Anyone else is signed out with a message.
@@ -643,8 +646,11 @@ $('#tkDelete').onclick=async()=>{
 let rzT; addEventListener('resize',()=>{clearTimeout(rzT);rzT=setTimeout(()=>{if(me)render()},200)});
 
 // ---------- render ----------
+let expandBox=null, pendingRender=false;
+
 function render(){
   if(!me)return;
+  if(expandBox){pendingRender=true;return}   // do not yank the table out from under an open editor
   fillProjects();
   $('#stWho') && ($('#stWho').textContent=myName);
   const q=$('#q').value.trim().toLowerCase(), fp=$('#fltProject').value, fa=$('#fltAssignee').value,
@@ -698,9 +704,9 @@ function render(){
       <td style="white-space:nowrap">${fmtDay(t.date)}${pill}</td>
       <td><input class="edit" data-f="project" value="${esc(t.project)}" list="projList"></td>
       <td><select class="assign" data-f="assignedTo">${people.map(p=>`<option value="${esc(p.uid)}" ${p.uid===t.assignedTo?'selected':''}>${esc(p.name)}</option>`).join('')}</select>${by}</td>
-      <td><input class="edit" data-f="task" value="${esc(t.task)}"></td>
+      <td><input class="edit" data-f="task" value="${esc(t.task)}" title="${esc(t.task)}"></td>
       <td class="due"><input class="edit" type="date" data-f="due" value="${t.due||''}"></td>
-      <td class="hide"><input class="edit" data-f="notes" value="${esc(t.notes)}" placeholder="Notes"></td>
+      <td class="hide"><input class="edit" data-f="notes" value="${esc(t.notes)}" placeholder="Notes" title="${esc(t.notes)}"></td>
       <td class="status"><select data-f="status" class="${sCls}">${STATUS.map(s=>`<option ${s===t.status?'selected':''}>${s}</option>`).join('')}</select></td>
       <td class="pri"><select data-f="priority" class="p-${(t.priority||'').toLowerCase()}">${PRI.map(p=>`<option value="${p}" ${p===t.priority?'selected':''}>${p||'None'}</option>`).join('')}</select></td>
       <td class="hide done-at">${fmtStamp(t.completed)}</td>
@@ -709,6 +715,68 @@ function render(){
   });
   $('#tableWrap').innerHTML=html+'</tbody></table>';
 }
+
+// ---------- desktop: click a long field to open it full size ----------
+const EXPANDABLE=['task','notes'];
+
+function closeExpand(save){
+  if(!expandBox)return;
+  const {box,hint,input,taskId,field,original}=expandBox;
+  const val=box.value.trim();
+  box.remove(); hint.remove(); expandBox=null;
+  if(save&&val!==original){
+    input.value=val;
+    updateDoc(doc(db,'tasks',taskId),{[field]:val}).catch(ex=>toast('Could not save: '+ex.code));
+  }
+  if(pendingRender){pendingRender=false;render()}
+}
+
+$('#tableWrap').addEventListener('focusin',e=>{
+  const inp=e.target;
+  if(isMobile()||!inp.classList||!inp.classList.contains('edit'))return;
+  const field=inp.dataset.f;
+  if(!EXPANDABLE.includes(field))return;
+  const tr=inp.closest('tr.task'); if(!tr)return;
+  const t=tasks.find(x=>x.id===tr.dataset.id); if(!t)return;
+  if(expandBox)closeExpand(true);
+
+  const r=inp.getBoundingClientRect();
+  const box=document.createElement('textarea');
+  box.className='expandbox';
+  box.value=t[field]||'';
+  box.style.left=Math.max(6,r.left-6)+'px';
+  box.style.top=(r.top-5)+'px';
+  box.style.width=Math.min(Math.max(r.width+70,460),window.innerWidth-r.left-20)+'px';
+
+  const hint=document.createElement('div');
+  hint.className='expandhint';
+  hint.textContent='Esc to cancel, click away to save';
+
+  document.body.appendChild(box); document.body.appendChild(hint);
+  expandBox={box,hint,input:inp,taskId:t.id,field,original:t[field]||''};
+
+  box.style.height='auto';
+  box.style.height=Math.min(box.scrollHeight+4,260)+'px';
+  hint.style.left=box.style.left;
+  hint.style.top=(parseFloat(box.style.top)+box.offsetHeight)+'px';
+
+  box.focus();
+  box.setSelectionRange(box.value.length,box.value.length);
+  inp.blur();
+
+  box.addEventListener('input',()=>{
+    box.style.height='auto';
+    box.style.height=Math.min(box.scrollHeight+4,260)+'px';
+    hint.style.top=(parseFloat(box.style.top)+box.offsetHeight)+'px';
+  });
+  box.addEventListener('blur',()=>closeExpand(true));
+  box.addEventListener('keydown',ev=>{
+    if(ev.key==='Escape'){ev.preventDefault();closeExpand(false)}
+    if(ev.key==='Enter'&&!ev.shiftKey){ev.preventDefault();closeExpand(true)}
+  });
+});
+addEventListener('scroll',()=>{if(expandBox)closeExpand(true)},true);
+addEventListener('resize',()=>{if(expandBox)closeExpand(true)});
 
 // ---------- writes ----------
 $('#entry').addEventListener('submit',async e=>{
