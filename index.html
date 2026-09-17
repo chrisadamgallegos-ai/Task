@@ -134,6 +134,7 @@ header .brand{display:flex;align-items:center;gap:11px}
       <label>Email <input id="liEmail" type="email" autocomplete="username" required></label>
       <label>Password <input id="liPass" type="password" autocomplete="current-password" required></label>
       <button type="submit" id="liBtn">Sign in</button>
+      <p style="margin:10px 0 0;font-size:12px;text-align:center"><a href="#" id="liForgot" style="color:var(--navy-2)">Forgot password</a></p>
     </form>
     <div class="err" id="liErr"></div>
   </div>
@@ -231,19 +232,24 @@ const FIREBASE_CONFIG = {
 const ADMIN_EMAILS = ["chrisg@budawoodworks.com"];
 // Who can use the task manager. Must match the taskUser() list in the
 // Firestore rules. Anyone else is signed out with a message.
-const TASK_USERS = [
-  "chrisg@budawoodworks.com",
-  "bobd@budawoodworks.com",
-  "miket@budawoodworks.com",
-  "cameront@budawoodworks.com",
-  "daltonm@budawoodworks.com",
-  "divians@budawoodworks.com",
-  "jonathanc@budawoodworks.com"
+// Everyone who can use the task manager, with their Firebase user id.
+// This is what fills the "Assign to" dropdown, so people show up straight
+// away instead of only after their first sign-in.
+// Must match the taskUser() list in the Firestore rules.
+const ROSTER = [
+  { uid:"AnAryYUph9YAEvESl0Ri3hXqymW2", email:"chrisg@budawoodworks.com",     name:"Chris Gallegos" },
+  { uid:"7hnNHGK9nmYPXffrptSpTaJJPbE3", email:"bobd@budawoodworks.com",       name:"Bob Dumais" },
+  { uid:"FmAu8EmvGQX8Mv67olbk0SrRPPS2", email:"miket@budawoodworks.com",      name:"Mike Tudor" },
+  { uid:"IejhaCnHAbVOk6g9b46vPMS0Igs1", email:"cameront@budawoodworks.com",   name:"Cameron Thomas" },
+  { uid:"dUgSF9jg7wNs25TMkmHvNuIt5Lc2", email:"daltonm@budawoodworks.com",    name:"Dalton Morris" },
+  { uid:"7dGndxo5qZP1F85nsagFjZYhdJA2", email:"divians@budawoodworks.com",    name:"Divian Samuelson" },
+  { uid:"LmzK7ao7nYYrAUWHocA3fx5nndq2", email:"jonathanc@budawoodworks.com",  name:"Jonathan Campuzano" }
 ];
+const TASK_USERS = ROSTER.map(p => p.email);
 /* ========================================================== */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut }
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, sendPasswordResetEmail }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, collection, doc, addDoc, setDoc, updateDoc, deleteDoc,
          onSnapshot, query, where, writeBatch, enableIndexedDbPersistence }
@@ -284,7 +290,9 @@ $('#loginForm').addEventListener('submit',async e=>{
   try{
     await signInWithEmailAndPassword(auth,$('#liEmail').value.trim(),$('#liPass').value);
   }catch(ex){
-    const map={'auth/invalid-credential':'That email and password do not match an account.',
+    const map={'auth/invalid-credential':'That email and password do not match an account. Check the address is spelled right, including the .com.',
+               'auth/user-not-found':'There is no account with that email. Check the spelling of the address.',
+               'auth/wrong-password':'Wrong password for that account. Use Forgot password below if you need to reset it.',
                'auth/invalid-email':'That is not a valid email address.',
                'auth/too-many-requests':'Too many attempts. Wait a minute and try again.',
                'auth/network-request-failed':'No connection. Check your signal and try again.'};
@@ -293,6 +301,17 @@ $('#loginForm').addEventListener('submit',async e=>{
   btn.disabled=false; btn.textContent='Sign in';
 });
 $('#btnOut').onclick=()=>signOut(auth);
+$('#liForgot').onclick=async e=>{
+  e.preventDefault();
+  const em=$('#liEmail').value.trim(), err=$('#liErr');
+  if(!em){err.textContent='Type your email address above first, then click Forgot password.';err.style.display='block';return}
+  try{ await sendPasswordResetEmail(auth,em);
+       err.textContent='Reset link sent to '+em+'. Check your inbox, and your junk folder.';
+  }catch(ex){ err.textContent = ex.code==='auth/user-not-found'
+       ? 'There is no account with that email. Check the spelling of the address.'
+       : 'Could not send the reset email: '+ex.code; }
+  err.style.display='block';
+};
 
 onAuthStateChanged(auth,async u=>{
   unsub.forEach(f=>f()); unsub=[];
@@ -308,7 +327,11 @@ onAuthStateChanged(auth,async u=>{
   me=u; isAdmin=ADMIN_EMAILS.includes(email);
   myName=(u.displayName||'')|| u.email.split('@')[0].replace(/[._]/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
   $('#gate').style.display='none'; $('#app').style.display='block';
-  await setDoc(doc(db,'people',u.uid),{uid:u.uid,email:u.email,name:myName},{merge:true});
+  const r=ROSTER.find(x=>x.uid===u.uid);
+  if(r) myName=r.name;
+  people=ROSTER.slice().sort((a,b)=>a.name.localeCompare(b.name));
+  fillPeople();
+  try{ await setDoc(doc(db,'people',u.uid),{uid:u.uid,email:u.email,name:myName},{merge:true}) }catch(e){}
   listen();
 });
 
@@ -329,7 +352,9 @@ function listen(){
     s=>{sentMap=new Map(s.docs.map(d=>[d.id,rowToTask(d)]));merge()},
     e=>toast('Could not load tasks you assigned: '+e.code)));
   unsub.push(onSnapshot(collection(db,'people'),s=>{
-    people=s.docs.map(d=>d.data()).sort((a,b)=>a.name.localeCompare(b.name));
+    const saved=new Map(s.docs.map(d=>[d.id,d.data()]));
+    people=ROSTER.map(r=>({...r,name:(saved.get(r.uid)||{}).name||r.name}))
+                 .sort((a,b)=>a.name.localeCompare(b.name));
     const p=people.find(x=>x.uid===me.uid); if(p) myName=p.name;
     fillPeople(); render();
   }));
