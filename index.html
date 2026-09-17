@@ -4,6 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#172853">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
 <title>BWW Task Manager</title>
 <style>
 :root{
@@ -83,6 +88,33 @@ dialog textarea{width:100%;min-height:150px;border:1px solid var(--line);padding
 dialog .row{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}
 dialog button{border:1px solid var(--line);background:#fff;border-radius:3px;padding:6px 12px;cursor:pointer}
 dialog button.primary{background:var(--navy);color:#fff;border-color:var(--navy)}
+
+/* auth gate */
+#gate{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:50;padding:20px}
+#gate .box{background:var(--paper);border:1px solid var(--line);border-top:4px solid var(--navy);padding:22px 24px;width:min(360px,100%)}
+#gate h1{margin:0 0 4px;font-size:19px;color:var(--navy)}
+#gate p.sub{margin:0 0 16px;font-size:12px;color:var(--muted)}
+#gate label{display:block;font-size:11px;color:var(--muted);margin-bottom:10px}
+#gate input{width:100%;border:1px solid var(--line);border-radius:3px;padding:8px;margin-top:3px;background:#fff}
+#gate button{width:100%;background:var(--navy);color:#fff;border:0;border-radius:3px;padding:10px;font-weight:700;cursor:pointer;margin-top:4px}
+#gate button:disabled{opacity:.6;cursor:default}
+#gate .err{color:var(--red-fg);background:var(--red-bg);font-size:12px;padding:7px 9px;margin-top:10px;display:none}
+#app{display:none}
+header .who{font-size:12px;opacity:.9}
+header .who b{font-weight:700}
+.byline{font-size:10px;color:var(--muted);display:block;line-height:1.2}
+tr.task.overdue .byline,tr.task.done .byline,tr.task.prog .byline{color:inherit;opacity:.75}
+.seedbar{background:var(--med-bg);color:var(--med-fg);border:1px solid var(--line);padding:10px 12px;margin-bottom:12px;font-size:12.5px;display:flex;align-items:center;gap:12px}
+.seedbar button{background:var(--navy);color:#fff;border:0;border-radius:3px;padding:6px 12px;cursor:pointer;font-weight:700}
+.offline{background:var(--red-bg);color:var(--red-fg);padding:6px 20px;font-size:12px;display:none}
+
+#gate .box{text-align:center}
+#gate .logo{width:200px;max-width:70%;height:auto;margin:2px auto 14px;display:block}
+#gate h1{font-size:15px;letter-spacing:.4px;text-transform:uppercase;color:var(--muted);font-weight:700}
+#gate label,#gate .err{text-align:left}
+header .mark{height:34px;width:auto;display:block;margin-right:2px}
+header .brand{display:flex;align-items:center;gap:11px}
+@media (max-width:560px){header .mark{height:28px}}
 @media (max-width:900px){
   .entry form{grid-template-columns:1fr 1fr}
   .entry form label:nth-child(3){grid-column:1/-1}
@@ -93,8 +125,22 @@ dialog button.primary{background:var(--navy);color:#fff;border-color:var(--navy)
 </style>
 </head>
 <body>
+<div id="gate">
+  <div class="box">
+    <img class="logo" alt="Buda Woodworks" src="data:image/png;base64,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">
+    <h1>Task Manager</h1>
+    <p class="sub">Sign in with your Buda Woodworks email.</p>
+    <form id="loginForm">
+      <label>Email <input id="liEmail" type="email" autocomplete="username" required></label>
+      <label>Password <input id="liPass" type="password" autocomplete="current-password" required></label>
+      <button type="submit" id="liBtn">Sign in</button>
+    </form>
+    <div class="err" id="liErr"></div>
+  </div>
+</div>
+<div id="app">
 <header>
-  <h1>BWW Task Manager</h1>
+  <div class="brand"><img class="mark" alt="" src="data:image/png;base64,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"><h1>Task Manager</h1></div>
   <div class="stats">
     <span><b id="stOpen">0</b>open</span>
     <span class="warn"><b id="stOver">0</b>overdue</span>
@@ -105,14 +151,17 @@ dialog button.primary{background:var(--navy);color:#fff;border-color:var(--navy)
     <button id="btnExport" type="button">Export</button>
     <button id="btnImport" type="button">Import</button>
     <button id="btnCsv" type="button">CSV</button>
+    <button id="btnOut" type="button">Sign out</button>
   </div>
 </header>
+<div class="offline" id="offBar">Offline. Changes are saved here and will sync when you reconnect.</div>
 <main>
+  <div class="seedbar" id="seedBar" style="display:none"><span id="seedMsg"></span><button type="button" id="seedBtn">Import them</button></div>
   <section class="entry">
     <h2>New task entry</h2>
     <form id="entry" autocomplete="off">
       <label>Project <input id="fProject" list="projList" placeholder="Job acronym" required></label>
-      <label>Assignee <input id="fAssignee" list="asgList" placeholder="Who"></label>
+      <label>Assign to <select id="fAssignee"></select></label>
       <label>Task <input id="fTask" placeholder="What needs to happen" required></label>
       <label>Due date <input id="fDue" type="date"></label>
       <label>Priority <select id="fPriority"><option value="">None</option><option>Critical</option><option selected>High</option><option>Med</option><option>Low</option></select></label>
@@ -120,12 +169,12 @@ dialog button.primary{background:var(--navy);color:#fff;border-color:var(--navy)
       <p class="hint">Dated today automatically. Enter adds the task.</p>
     </form>
     <datalist id="projList"></datalist>
-    <datalist id="asgList"></datalist>
-  </section>
+      </section>
 
   <div class="filters">
     <input id="q" type="search" placeholder="Search tasks, notes, projects">
     <select id="fltProject"><option value="">All projects</option></select>
+    <select id="fltScope"><option value="">Everything I can see</option><option value="mine">Assigned to me</option><option value="sent">I assigned to others</option></select>
     <select id="fltAssignee"><option value="">All assignees</option></select>
     <select id="fltStatus">
       <option value="open">Open only</option>
@@ -149,13 +198,11 @@ dialog button.primary{background:var(--navy);color:#fff;border-color:var(--navy)
 </main>
 
 <dialog id="dlgLists">
-  <h3>Projects and assignees</h3>
-  <p style="margin:0 0 6px;font-size:12px;color:var(--muted)">One per line. These feed the dropdowns. Anything typed into a task gets added automatically.</p>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-    <label style="font-size:12px">Projects<textarea id="txtProjects"></textarea></label>
-    <label style="font-size:12px">Assignees<textarea id="txtAssignees"></textarea></label>
-  </div>
-  <div class="row"><button type="button" id="listsCancel">Cancel</button><button type="button" class="primary" id="listsSave">Save lists</button></div>
+  <h3>Settings</h3>
+  <label style="font-size:12px;display:block;margin-bottom:12px">Your display name, this is what others see on tasks you assign<input id="txtName" style="width:100%;border:1px solid var(--line);border-radius:3px;padding:7px;margin-top:3px"></label>
+  <p style="margin:0 0 6px;font-size:12px;color:var(--muted)">Project list, one per line. Anything typed into a task gets added automatically.</p>
+  <label style="font-size:12px;display:block">Projects<textarea id="txtProjects"></textarea></label>
+  <div class="row"><button type="button" id="listsCancel">Cancel</button><button type="button" class="primary" id="listsSave">Save</button></div>
 </dialog>
 
 <dialog id="dlgImport">
@@ -167,151 +214,307 @@ dialog button.primary{background:var(--navy);color:#fff;border-color:var(--navy)
 
 <div class="toast" id="toast"></div>
 <input type="file" id="fileIn" accept=".json" hidden>
-<script>
+<script type="module">
 const SEED=[{"id":1,"date":"2026-08-25","project":"TNLK","assignee":"","task":"Find out if they have paid retainage, let Donna know","due":"2026-08-25","notes":"","status":"Not Started","priority":"High","completed":null},{"id":2,"date":"2026-08-24","project":"RRCT","assignee":"","task":"Create MTO and tie tie to budget","due":"2026-08-25","notes":"","status":"Not Started","priority":"High","completed":null},{"id":3,"date":"2026-08-24","project":"RRCT","assignee":"","task":"Build MTO","due":"2026-08-24","notes":"","status":"Not Started","priority":"High","completed":null},{"id":4,"date":"2026-08-24","project":"RRCT","assignee":"","task":"Build Budget, send to Mike","due":"2026-08-24","notes":"","status":"Not Started","priority":"High","completed":null},{"id":5,"date":"2026-08-24","project":"RRCT","assignee":"","task":"Assign project and schedule hand off","due":"2026-08-24","notes":"","status":"Not Started","priority":"High","completed":null},{"id":6,"date":"2026-08-24","project":"TX16","assignee":"","task":"Follow up that Dalton has punch item 787 figured out and if we are on target to deliver added scope","due":"2026-08-27","notes":"","status":"Not Started","priority":"High","completed":null},{"id":7,"date":"2026-08-24","project":"SCRD","assignee":"","task":"Hand off to Cameron","due":"2026-08-24","notes":"","status":"Not Started","priority":"High","completed":null},{"id":8,"date":"2026-08-24","project":"SCRD","assignee":"","task":"Get Alex a bid proposal","due":"2026-08-24","notes":"","status":"Not Started","priority":"High","completed":null},{"id":9,"date":"2026-08-18","project":"CSMS","assignee":"","task":"Split solid surface from work orders","due":"2026-08-18","notes":"","status":"Not Started","priority":"High","completed":null},{"id":10,"date":"2026-08-18","project":"BUDA","assignee":"","task":"Create completion list for all active projects","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":11,"date":"2026-08-18","project":"BUDA","assignee":"","task":"Work on installation work orders for all projects","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":12,"date":"2026-08-18","project":"BUDA","assignee":"","task":"Reply to Kenny Perez, looking for install work","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":13,"date":"2026-08-18","project":"BUDA","assignee":"","task":"Make a workbook for Billings, revenue projections and financials","due":null,"notes":"","status":"Not Started","priority":"Critical","completed":null},{"id":14,"date":"2026-08-18","project":"BUDA","assignee":"","task":"Send out fake bids to have installers quote","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":15,"date":"2026-08-17","project":"BUDA","assignee":"","task":"Introduce \"Tags\" in shop Drawings","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":16,"date":"2026-08-17","project":"BUDA","assignee":"","task":"Get all budgets run through claude to extract codes to send to mike.","due":"2026-08-21","notes":"","status":"Not Started","priority":"High","completed":null},{"id":17,"date":"2026-08-17","project":"TX16","assignee":"","task":"Have dalton look into punch items","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":18,"date":"2026-08-17","project":"BUDA","assignee":"","task":"Add panel take off to MTO","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":19,"date":"2026-08-17","project":"BUDA","assignee":"","task":"Update AR","due":null,"notes":"","status":"Completed","priority":"Critical","completed":"2026-08-17T12:17:14"},{"id":20,"date":"2026-08-17","project":"BUDA","assignee":"","task":"Book Flight","due":"2026-08-17","notes":"","status":"Completed","priority":"Critical","completed":"2026-08-17T11:42:24"},{"id":21,"date":"2026-08-14","project":"CSMS","assignee":"","task":"Let Royal know about the 7 trash units on back order till sept 23rd, check Donna email","due":null,"notes":"They are not back order anymore","status":"Completed","priority":"High","completed":"2026-08-17T12:17:38"},{"id":22,"date":"2026-08-12","project":"BUDA","assignee":"","task":"Add panel take off tab to MTO sheet.","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":23,"date":"2026-08-12","project":"KLWL","assignee":"","task":"Retainage, find out when will receive, Let Miguel from Hutto know","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":24,"date":"2026-08-12","project":"BUDA","assignee":"","task":"Add a step in innergy for \"MV-Specs\". Also add a tab to separate sheet count on MTO by area reports.","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":25,"date":"2026-08-11","project":"CSMS","assignee":"","task":"Send Alyson material cost","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":26,"date":"2026-08-06","project":"FHHQ","assignee":"","task":"Drawings need to be uploaded & ensure work orders are broken up.","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":27,"date":"2026-08-03","project":"BUDA","assignee":"","task":"Work on a view that shows what work all subs are working on. Stone , Fabric and install","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":28,"date":"2026-08-03","project":"Stone Source","assignee":"","task":"Update installation pricing.","due":"2026-08-03","notes":"","status":"Not Started","priority":"High","completed":null},{"id":29,"date":"2026-08-03","project":"BUDA","assignee":"","task":"Look into september work load and ensure the dates are correct. Get back to bob with report","due":"2026-08-03","notes":"","status":"Not Started","priority":"High","completed":null},{"id":30,"date":"2026-08-03","project":"NFMT","assignee":"","task":"Load shop drawings in to Innergy","due":null,"notes":"","status":"Not Started","priority":"Med","completed":null},{"id":31,"date":"2026-08-03","project":"BUDA","assignee":"","task":"Find out if we arew going to Innergy summit in Atlanta","due":null,"notes":"","status":"Not Started","priority":"Med","completed":null},{"id":32,"date":"2026-07-31","project":"FHHQ","assignee":"","task":"Talk with Albert, tight","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":33,"date":"2026-07-31","project":"OSPR","assignee":"","task":"Ask Jeff about COR003 Redline change","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":34,"date":"2026-07-31","project":"BUDA","assignee":"","task":"Create a master list class.","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":35,"date":"2026-07-31","project":"RDMD","assignee":"","task":"Get with Doug on COR002, should be 1000 less","due":null,"notes":"","status":"Not Started","priority":"Med","completed":null},{"id":36,"date":"2026-07-30","project":"MRKR","assignee":"","task":"Look into Paycom and if job has been input for clock in","due":"2026-07-30","notes":"","status":"Not Started","priority":"Critical","completed":null},{"id":37,"date":"2026-07-28","project":"BUDA","assignee":"","task":"Work on a quality plan for all plans (CSAT &QOKS)","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":38,"date":"2026-07-27","project":"TXSD","assignee":"","task":"Get with Jonathan about 3 samples requested. He needs to bring in material and make work order","due":null,"notes":"","status":"Not Started","priority":"Med","completed":null},{"id":39,"date":"2026-07-27","project":"BUDA","assignee":"","task":"Finish building roles and Resposibilities for Mike and senior role","due":"2026-07-31","notes":"","status":"Not Started","priority":"High","completed":null},{"id":40,"date":"2026-07-24","project":"QOKS","assignee":"","task":"Check and see if Bob signed contract or needs help","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":41,"date":"2026-07-23","project":"Northwest","assignee":"","task":"Send project scheduler","due":"2026-07-23","notes":"","status":"Not Started","priority":"High","completed":null},{"id":42,"date":"2026-07-23","project":"Cedar Park","assignee":"","task":"Send out details fro quotes onstair railing","due":"2026-07-23","notes":"","status":"Not Started","priority":"High","completed":null},{"id":43,"date":"2026-07-22","project":"Stone Collection","assignee":"","task":"Get Alex a price for plywood substraight","due":"2026-07-22","notes":"","status":"Not Started","priority":"High","completed":null},{"id":44,"date":"2026-07-22","project":"RLSW","assignee":"","task":"Review all data and compile an email to reject back charge","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":45,"date":"2026-07-13","project":"ASMC","assignee":"","task":"Follow up on change order. Tell Dalton","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":46,"date":"2026-07-13","project":"BUDA","assignee":"","task":"Purchase Humidity sensors","due":null,"notes":"","status":"Not Started","priority":"","completed":null},{"id":47,"date":"2026-07-13","project":"BUDA","assignee":"","task":"Make sure GTO CO is in files","due":null,"notes":"","status":"Not Started","priority":"Med","completed":null},{"id":48,"date":"2026-07-13","project":"TX16","assignee":"","task":"Add deducted change order Alyson emailed about","due":null,"notes":"","status":"Not Started","priority":"","completed":null},{"id":49,"date":"2026-07-13","project":"BUDA","assignee":"","task":"Update quility checklist pertaining to the 2\" x 2\" required in upper. Only if QCP would it require lower screws","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":50,"date":"2026-07-13","project":"BUDA","assignee":"","task":"T&M ticket refinment, get with Daniel","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":51,"date":"2026-07-13","project":"WJJC","assignee":"","task":"Talk with Mike about FR cores and how we should us FRPB","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":52,"date":"2026-07-13","project":"QOKS","assignee":"","task":"Review new project and set up hand off","due":null,"notes":"","status":"Not Started","priority":"Critical","completed":null},{"id":53,"date":"2026-07-13","project":"UTSA","assignee":"","task":"Talk with Mike about an email sent from Derek Dobbins on CO12","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":54,"date":"2026-07-13","project":"BUDA","assignee":"","task":"Send Sean from NW an email with production schedule","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":55,"date":"2026-07-13","project":"BUDA","assignee":"","task":"Update work flows on innergy","due":null,"notes":"","status":"Not Started","priority":"Critical","completed":null},{"id":56,"date":"2026-07-13","project":"BUDA","assignee":"","task":"Make a Change order view that shows all accepted CO's that need GC CO. Email team on View","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":57,"date":"2026-07-13","project":"TX16","assignee":"","task":"Follow up with Dalton and make sure he is talking with Misael on adds","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":58,"date":"2026-07-13","project":"BUDA","assignee":"","task":"Make an SOV worksheet team can use to project billing. Labor & material by location","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":59,"date":"2026-07-13","project":"KLWL","assignee":"","task":"Set up installation for door pulls. Find out if we need to install both","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":60,"date":"2026-07-13","project":"RAND","assignee":"","task":"Get Alex pricing for items he sent over. Talk with Doug","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":61,"date":"2026-07-13","project":"BUDA","assignee":"","task":"Talk with Bob about Raken status. See what price is","due":null,"notes":"","status":"Not Started","priority":"Med","completed":null},{"id":62,"date":"2026-07-13","project":"BUDA","assignee":"","task":"Make a budget sheet for each project. Need for PM & accounting","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":63,"date":"2026-07-13","project":"BUDA","assignee":"","task":"Make single install work orders for all acrive projects","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":64,"date":"2026-07-01","project":"MOSP","assignee":"","task":"Review new job and set up hand off","due":"2026-07-02","notes":"","status":"Not Started","priority":"High","completed":null},{"id":65,"date":"2026-07-01","project":"BUDA","assignee":"","task":"Transfer all data from Innergy to Mike Bristow forms","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":66,"date":"2026-06-29","project":"TSFD","assignee":"","task":"Look into sub requirments (wages)","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":67,"date":"2026-06-22","project":"BUDA","assignee":"","task":"Quality Plan","due":null,"notes":"","status":"Not Started","priority":"Med","completed":null},{"id":68,"date":"2026-06-22","project":"KLWL","assignee":"","task":"Order 2 pulls, send them change order","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":69,"date":"2026-06-19","project":"PVIP","assignee":"","task":"Talk with Bob and Jeff about proposal","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":70,"date":"2026-06-19","project":"ARCB","assignee":"","task":"Create a template sketch to route slats. Give to Albert","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":71,"date":"2026-06-19","project":"CSK5","assignee":"","task":"Call Zack back about benches","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":72,"date":"2026-06-19","project":"CSK5","assignee":"","task":"Send Nail-It an updated Work Authorization","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":73,"date":"2026-06-19","project":"ASMC","assignee":"","task":"Send Bernardino an upadated Work Order","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":74,"date":"2026-06-19","project":"BUDA","assignee":"","task":"Look Over what Whitney sent you from Izzy","due":null,"notes":"","status":"Not Started","priority":"Med","completed":null},{"id":75,"date":"2026-06-17","project":"BUDA","assignee":"","task":"Work on projecting all schedules on every project","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":76,"date":"2026-06-17","project":"BUDA","assignee":"","task":"Update sample tracker to have a procurment gant chart","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":77,"date":"2026-06-16","project":"BUDA","assignee":"","task":"Update Finish sample process","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":78,"date":"2026-06-16","project":"EHRH","assignee":"","task":"Do a take off on fabric panels","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":79,"date":"2026-06-16","project":"JWMarriott","assignee":"","task":"Send Moses a take off","due":null,"notes":"","status":"Not Started","priority":"Critical","completed":null},{"id":80,"date":"2026-06-15","project":"VBHH","assignee":"","task":"Set up hand off with PM for new project","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":81,"date":"2026-06-12","project":"BUDA","assignee":"","task":"Write an explination for project steps","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":82,"date":"2026-06-12","project":"BUDA","assignee":"","task":"Email engineering team about needs from Pm's","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":83,"date":"2026-06-11","project":"BUDA","assignee":"","task":"On Site Contact? This field is for shippment items, can it be changes to be outside of GC contacts","due":null,"notes":"","status":"Not Started","priority":"Med","completed":null},{"id":84,"date":"2026-06-11","project":"GASC","assignee":"","task":"Schedule hinge clips to be installed next week","due":null,"notes":"I asked Daniel if his guys could do it","status":"In Progress","priority":"High","completed":null},{"id":85,"date":"2026-06-11","project":"EHRH","assignee":"","task":"Review PR-03 and get to estimating or Divian","due":null,"notes":"I reviewed and no millwork in PR03","status":"Completed","priority":"Med","completed":"2026-06-11T15:20:50"},{"id":86,"date":"2026-06-11","project":"BUDA","assignee":"","task":"Make a complete proceess chart. Need to show Interns","due":null,"notes":"","status":"Not Started","priority":"Med","completed":null},{"id":87,"date":"2026-06-11","project":"BUDA","assignee":"","task":"Create install standards and send to all subs","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":88,"date":"2026-06-10","project":"BUDA","assignee":"","task":"Talk witth Bob about Linbeck lunch for intern","due":null,"notes":"I need to build a process sheet","status":"Completed","priority":"Med","completed":"2026-06-11T15:23:14"},{"id":89,"date":"2026-06-10","project":"USAC","assignee":"","task":"Send Northwest an email about shipping cost","due":null,"notes":"I told Bob, he said he would bring it up","status":"Completed","priority":"High","completed":"2026-06-11T15:23:29"},{"id":90,"date":"2026-06-09","project":"KLWL","assignee":"","task":"Follow up with Tyler to see about added doors","due":null,"notes":"Sent him email","status":"In Progress","priority":"Med","completed":null},{"id":91,"date":"2026-06-08","project":"BUDA","assignee":"","task":"Work on updating sample tracker with auto label generator","due":null,"notes":"","status":"Not Started","priority":"Med","completed":null},{"id":92,"date":"2026-06-08","project":"BUDA","assignee":"","task":"Get Dalton to update project status","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":93,"date":"2026-06-04","project":"BUDA","assignee":"","task":"List Job posting for delivery and receiving","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":94,"date":"2026-06-04","project":"BUDA","assignee":"","task":"Get Whitney what she needs from Raul for installation","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":95,"date":"2026-06-04","project":"TX16","assignee":"","task":"Get Panel into production fro Friday. Get them pricing asap.","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":96,"date":"2026-06-04","project":"CSK5","assignee":"","task":"Cut down doors 1/8\" off top and move hinge cup. Install locks 40\" Center - 5/8 to center Right Door. Also 1 tube of color caulk that matches doors. Add other damaged doors","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":97,"date":"2026-06-04","project":"GASC","assignee":"","task":"Get a price from Bernardino for drawer slides, set up fro Friday install","due":null,"notes":"","status":"Not Started","priority":"Critical","completed":null},{"id":98,"date":"2026-06-03","project":"CSK5","assignee":"","task":"Get Mike from nail it a new WA for added scope","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":99,"date":"2026-06-03","project":"CSK5","assignee":"","task":"Create work order to cut science room doors and hinges on tall cabinets","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":100,"date":"2026-06-01","project":"ASMC","assignee":"","task":"Look into ASI countertops Nick is talking about","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":101,"date":"2026-06-01","project":"GASC","assignee":"","task":"Keith will check slide thickness then I need to order 12 pairs","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":102,"date":"2026-06-01","project":"BUDA","assignee":"","task":"Review WHIP material","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":103,"date":"2026-06-01","project":"CSK5","assignee":"","task":"Make a work order for new doors","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":104,"date":"2026-06-01","project":"GASC","assignee":"","task":"12 File drawers need to be soft close. Look at finding soft close hardware to replace","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":105,"date":"2026-06-01","project":"GASC","assignee":"","task":"Make sure Dalton emails final docs","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":106,"date":"2026-06-01","project":"GASC","assignee":"","task":"Get file bars delivered","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":107,"date":"2026-05-29","project":"WJJC","assignee":"","task":"Build panel take off for court room","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":108,"date":"2026-05-29","project":"WJJC","assignee":"","task":"Talk with mike about quotes and compare","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":109,"date":"2026-05-28","project":"BUDA","assignee":"","task":"Get PM's to update innergy with Awarded Sub Installer","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":110,"date":"2026-05-28","project":"USAC","assignee":"","task":"Look at ordering trim for Global soffit","due":null,"notes":"","status":"Not Started","priority":"","completed":null},{"id":111,"date":"2026-05-28","project":"USAC","assignee":"","task":"Talk with pete about templates. Kitchen global & Salad bar","due":null,"notes":"","status":"Not Started","priority":"","completed":null},{"id":112,"date":"2026-05-28","project":"CSK5","assignee":"","task":"Add to shipping for Tuesday","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":113,"date":"2026-05-28","project":"CSK5","assignee":"","task":"Grommets - need 4 for reception. Pulls, locks and catches","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":114,"date":"2026-05-28","project":"TX16","assignee":"","task":"Send Miguel a updated WA showing back charges","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":115,"date":"2026-05-27","project":"TX16","assignee":"","task":"Set up delivery for Monday on pulls and coordinate with GC & Miguel","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":116,"date":"2026-05-27","project":"GCLC","assignee":"","task":"Get Bernadino an updated Work Authorization","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":117,"date":"2026-05-27","project":"GASC","assignee":"","task":"Look into hing stops for patient bay door stops. Get Josh pricing","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":118,"date":"2026-05-27","project":"INNERGY","assignee":"","task":"Review Innergy Assessment and make a plan from Jessica","due":null,"notes":"","status":"Not Started","priority":"","completed":null},{"id":119,"date":"2026-05-27","project":"INNERGY","assignee":"","task":"Create a change order Kanban that matches real world","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":120,"date":"2026-05-27","project":"BUDA","assignee":"","task":"Create a work order checklist","due":null,"notes":"","status":"Not Started","priority":"Critical","completed":null},{"id":121,"date":"2026-05-27","project":"BUDA","assignee":"","task":"Make a packge we can send installers so they know what we require","due":"2026-05-27","notes":"","status":"Not Started","priority":"Critical","completed":null},{"id":122,"date":"2026-05-27","project":"CSK5","assignee":"","task":"Look into missing elevation at library","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":123,"date":"2026-05-27","project":"ASMC","assignee":"","task":"Send Bernadino Drawings of pencile drawer","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":124,"date":"2026-05-22","project":"BUDA","assignee":"","task":"Reach out to Lobo Woodwork for install. Daniel sent email","due":null,"notes":"Sent them our requirments","status":"Completed","priority":"High","completed":"2026-06-12T10:42:19"},{"id":125,"date":"2026-05-22","project":"KLWL","assignee":"","task":"Wednesday delivery, TV Cart & Shroud.","due":"2026-05-22","notes":"","status":"Not Started","priority":"High","completed":null},{"id":126,"date":"2026-05-22","project":"CSK5","assignee":"","task":"Make sure you send a copy of executed change order to Alyson and Bob","due":"2026-05-26","notes":"","status":"Not Started","priority":"Critical","completed":null},{"id":127,"date":"2026-05-22","project":"BUDA","assignee":"","task":"Get donna to get you pricing","due":null,"notes":"","status":"Not Started","priority":"Med","completed":null},{"id":128,"date":"2026-05-22","project":"BUDA","assignee":"","task":"Set Up meetings for Tru craft interview","due":null,"notes":"","status":"Completed","priority":"High","completed":"2026-06-12T10:41:59"},{"id":129,"date":"2026-05-22","project":"GASC","assignee":"","task":"Review punchlist and make sure we fabe everything we need to set up installers","due":"2026-05-22","notes":"","status":"Not Started","priority":"High","completed":null},{"id":130,"date":"2026-05-21","project":"TX16","assignee":"","task":"Get Misael the approval on paint backcharge","due":"2026-05-22","notes":"We are backcharging Miguel","status":"Completed","priority":"High","completed":"2026-05-28T14:58:49"},{"id":131,"date":"2026-05-21","project":"TX16","assignee":"","task":"Email Misael cost of new pulls and details on why","due":null,"notes":"","status":"Completed","priority":"High","completed":"2026-05-28T14:58:44"},{"id":132,"date":"2026-05-21","project":"BVET","assignee":"","task":"Call Rob Amoroso with Buda Veterinary Clinic","due":null,"notes":"Sent Dalton to call and find out","status":"Completed","priority":"Med","completed":"2026-05-28T14:58:27"},{"id":133,"date":"2026-05-21","project":"BUDA","assignee":"","task":"Work on COR's on work authorizations","due":null,"notes":"","status":"Completed","priority":"Med","completed":"2026-06-12T10:41:52"},{"id":134,"date":"2026-05-21","project":"BUDA","assignee":"","task":"Make a rule that all T&M must be billed separate from contract. There must also be back up showing hours per employee","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":135,"date":"2026-05-21","project":"PVIP","assignee":"","task":"Talk with Bob about Montbleau and if we are to proceed as if we have project","due":null,"notes":"Bob had said to proceed","status":"Completed","priority":"High","completed":"2026-05-28T10:33:30"},{"id":136,"date":"2026-05-21","project":"GCLC","assignee":"","task":"Create delivery on calendar today","due":"2026-05-21","notes":"","status":"Completed","priority":"Critical","completed":"2026-05-28T10:33:14"},{"id":137,"date":"2026-05-21","project":"GCLC","assignee":"","task":"Order more material for warranty work","due":null,"notes":"","status":"Completed","priority":"Critical","completed":"2026-05-28T10:33:09"},{"id":138,"date":"2026-05-21","project":"GASC","assignee":"","task":"Check if drawers were to be soft close","due":null,"notes":"No they were not","status":"Completed","priority":"High","completed":"2026-05-28T10:33:00"},{"id":139,"date":"2026-05-21","project":"BUDA","assignee":"","task":"Email 2 install companies and see if they can meet our requirements to onboard","due":null,"notes":"We need to send them work","status":"Completed","priority":"High","completed":"2026-06-11T15:20:00"},{"id":140,"date":"2026-05-20","project":"CSK5","assignee":"","task":"Have Donna purchase more prime trim for add","due":null,"notes":"Bob said we have enough on site","status":"Completed","priority":"High","completed":"2026-05-21T08:29:18"},{"id":141,"date":"2026-05-20","project":"CSK5","assignee":"","task":"Get prices from nail it on adds","due":null,"notes":"He just sent me librart","status":"In Progress","priority":"High","completed":null},{"id":142,"date":"2026-05-20","project":"CSK5","assignee":"","task":"Notify Mike that he may proceed on added trim, but need quote.","due":null,"notes":"Sent email, awaiting response","status":"Completed","priority":"High","completed":"2026-05-21T08:28:59"},{"id":143,"date":"2026-05-20","project":"OMNI","assignee":"","task":"Get back to Kathleen Sekula on refinishing tops","due":null,"notes":"I asked her for info so we could price to do internaly","status":"Completed","priority":"Med","completed":"2026-06-02T16:09:23"},{"id":144,"date":"2026-05-20","project":"BUDA","assignee":"","task":"Do Archline survey","due":null,"notes":"","status":"Not Started","priority":"High","completed":null},{"id":145,"date":"2026-05-20","project":"BUDA","assignee":"","task":"Send Daniel an update about Task durations I gave PM's","due":null,"notes":"","status":"Completed","priority":"High","completed":"2026-05-21T08:28:03"},{"id":146,"date":"2026-05-20","project":"BUDA","assignee":"","task":"Look into field software for installers or make one","due":null,"notes":"We are going to use Raken","status":"Completed","priority":"Med","completed":"2026-05-27T09:55:39"},{"id":147,"date":"2026-05-20","project":"INNERGY","assignee":"","task":"Create a view for current PM task","due":null,"notes":"","status":"Completed","priority":"Med","completed":"2026-06-11T15:19:47"},{"id":148,"date":"2026-05-20","project":"ASMC","assignee":"","task":"Send Bernadino an updated WA","due":null,"notes":"Sent, need to sign when returned","status":"Completed","priority":"High","completed":"2026-05-21T08:27:56"},{"id":149,"date":"2026-05-20","project":"TX16","assignee":"","task":"Send Misael change order for new pulls","due":null,"notes":"","status":"Completed","priority":"High","completed":"2026-05-21T08:27:52"},{"id":150,"date":"2026-05-20","project":"TX16","assignee":"","task":"Create a change order request for new pulls","due":null,"notes":"Sent a task to Jeff & Doug","status":"Completed","priority":"High","completed":"2026-05-21T08:27:39"},{"id":151,"date":"2026-05-20","project":"ASMC","assignee":"","task":"Email Hunter change orders for trim and drawer add","due":null,"notes":"Sent info to Doug. Douge sent back","status":"Completed","priority":"High","completed":"2026-05-20T15:19:25"}];
-// ---------- storage (works when hosted; falls back to memory in previews) ----------
-const KEY='bww_tasks_v1', LKEY='bww_lists_v1';
-const store={
-  get(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}},
-  set(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true}catch(e){return false}}
+
+/* ============================================================
+   FIREBASE SETTINGS — paste the four values from
+   Firebase console > Project settings > your web app.
+   These are public web keys. Safe to commit.
+   ============================================================ */
+const FIREBASE_CONFIG = {
+  apiKey:     "AIzaSyAEdHsBSYZMx51UM2I_wkCBkBsDnQ7UOT4",
+  authDomain: "buda-ar.firebaseapp.com",
+  projectId:  "buda-ar",
+  appId:      "1:953040503874:web:6eb280d36703a194eed9db"
 };
+const ADMIN_EMAILS = ["chrisg@budawoodworks.com"];
+// Who can use the task manager. Must match the taskUser() list in the
+// Firestore rules. Anyone else is signed out with a message.
+const TASK_USERS = [
+  "chrisg@budawoodworks.com",
+  "bobd@budawoodworks.com",
+  "miket@budawoodworks.com",
+  "cameront@budawoodworks.com",
+  "daltonm@budawoodworks.com",
+  "divians@budawoodworks.com",
+  "jonathanc@budawoodworks.com"
+];
+/* ========================================================== */
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut }
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, collection, doc, addDoc, setDoc, updateDoc, deleteDoc,
+         onSnapshot, query, where, writeBatch, enableIndexedDbPersistence }
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const fb = initializeApp(FIREBASE_CONFIG);
+const auth = getAuth(fb);
+const db = getFirestore(fb);
+enableIndexedDbPersistence(db).catch(()=>{});   // offline cache; fails harmlessly in 2nd tab
+
 const STATUS=['Not Started','In Progress','Completed'];
 const PRI=['','Critical','High','Med','Low'];
+const $=s=>document.querySelector(s);
 
-let tasks = store.get(KEY) || SEED.map(t=>({...t}));
-let lists = store.get(LKEY) || {projects:[],assignees:[]};
-let nextId = tasks.reduce((m,t)=>Math.max(m,t.id||0),0)+1;
+let me=null, myName='', isAdmin=false;
+let tasks=[];                       // merged live view
+let mineMap=new Map(), sentMap=new Map();
+let people=[];                      // [{uid,name,email}]
+let projects=[];
+let unsub=[];
 
 // ---------- helpers ----------
-const $=s=>document.querySelector(s);
-const todayISO=()=>{const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-')};
+const todayISO=()=>{const d=new Date();const p=n=>String(n).padStart(2,'0');return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`};
 const DOW=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 function fmtDay(iso){if(!iso)return'';const [y,m,d]=iso.split('-').map(Number);const dt=new Date(y,m-1,d);return `${m}/${d}/${String(y).slice(2)} ${DOW[dt.getDay()]}`}
 function fmtStamp(iso){if(!iso)return'';const d=new Date(iso);let h=d.getHours(),ap=h>=12?'PM':'AM';h=h%12||12;return `${d.getMonth()+1}/${d.getDate()}/${String(d.getFullYear()).slice(2)} ${h}:${String(d.getMinutes()).padStart(2,'0')} ${ap}`}
 function localNowISO(){const d=new Date();const p=n=>String(n).padStart(2,'0');return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`}
 const isOverdue=t=>t.due && t.status!=='Completed' && t.due<todayISO();
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-function save(){const ok=store.set(KEY,tasks)&&store.set(LKEY,lists);if(!ok&&!save.warned){save.warned=true;toast('Preview mode: changes stay until you close this page. Host the file to keep them.')}}
-let toastT;function toast(m){const el=$('#toast');el.textContent=m;el.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove('show'),2600)}
+const nameOf=uid=>{const p=people.find(x=>x.uid===uid);return p?p.name:(uid===me?.uid?myName:'Unassigned')};
+let toastT;function toast(m){const el=$('#toast');el.textContent=m;el.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove('show'),2800)}
 
-function allProjects(){const s=new Set(lists.projects);tasks.forEach(t=>t.project&&s.add(t.project));return [...s].sort((a,b)=>a.localeCompare(b,undefined,{sensitivity:'base'}))}
-function allAssignees(){const s=new Set(lists.assignees);tasks.forEach(t=>t.assignee&&s.add(t.assignee));return [...s].sort((a,b)=>a.localeCompare(b,undefined,{sensitivity:'base'}))}
-function fillLists(){
-  const p=allProjects(),a=allAssignees();
+// ---------- sign in ----------
+$('#loginForm').addEventListener('submit',async e=>{
+  e.preventDefault();
+  const btn=$('#liBtn'), err=$('#liErr');
+  btn.disabled=true; btn.textContent='Signing in...'; err.style.display='none';
+  try{
+    await signInWithEmailAndPassword(auth,$('#liEmail').value.trim(),$('#liPass').value);
+  }catch(ex){
+    const map={'auth/invalid-credential':'That email and password do not match an account.',
+               'auth/invalid-email':'That is not a valid email address.',
+               'auth/too-many-requests':'Too many attempts. Wait a minute and try again.',
+               'auth/network-request-failed':'No connection. Check your signal and try again.'};
+    err.textContent=map[ex.code]||('Sign in failed: '+ex.code); err.style.display='block';
+  }
+  btn.disabled=false; btn.textContent='Sign in';
+});
+$('#btnOut').onclick=()=>signOut(auth);
+
+onAuthStateChanged(auth,async u=>{
+  unsub.forEach(f=>f()); unsub=[];
+  if(!u){ me=null; $('#gate').style.display='flex'; $('#app').style.display='none'; return }
+  const email=(u.email||'').toLowerCase();
+  if(!TASK_USERS.includes(email)){
+    await signOut(auth);
+    const err=$('#liErr');
+    err.textContent='That account does not have access to the Task Manager. Ask Chris if you need it.';
+    err.style.display='block';
+    return;
+  }
+  me=u; isAdmin=ADMIN_EMAILS.includes(email);
+  myName=(u.displayName||'')|| u.email.split('@')[0].replace(/[._]/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
+  $('#gate').style.display='none'; $('#app').style.display='block';
+  await setDoc(doc(db,'people',u.uid),{uid:u.uid,email:u.email,name:myName},{merge:true});
+  listen();
+});
+
+// ---------- live data ----------
+function rowToTask(d){const t=d.data();return{id:d.id,...t}}
+function merge(){
+  const m=new Map();
+  mineMap.forEach((v,k)=>m.set(k,v));
+  sentMap.forEach((v,k)=>m.set(k,v));
+  tasks=[...m.values()];
+  render();
+}
+function listen(){
+  unsub.push(onSnapshot(query(collection(db,'tasks'),where('assignedTo','==',me.uid)),
+    s=>{mineMap=new Map(s.docs.map(d=>[d.id,rowToTask(d)]));merge()},
+    e=>toast('Could not load your tasks: '+e.code)));
+  unsub.push(onSnapshot(query(collection(db,'tasks'),where('createdBy','==',me.uid)),
+    s=>{sentMap=new Map(s.docs.map(d=>[d.id,rowToTask(d)]));merge()},
+    e=>toast('Could not load tasks you assigned: '+e.code)));
+  unsub.push(onSnapshot(collection(db,'people'),s=>{
+    people=s.docs.map(d=>d.data()).sort((a,b)=>a.name.localeCompare(b.name));
+    const p=people.find(x=>x.uid===me.uid); if(p) myName=p.name;
+    fillPeople(); render();
+  }));
+  unsub.push(onSnapshot(doc(db,'people',me.uid),d=>{
+    const v=d.data(); if(v?.projects) projects=v.projects; fillProjects();
+  }));
+}
+
+function fillPeople(){
+  const sel=$('#fAssignee'), keep=sel.value;
+  sel.innerHTML=people.map(p=>`<option value="${esc(p.uid)}">${esc(p.name)}${p.uid===me.uid?' (me)':''}</option>`).join('');
+  sel.value=keep||me.uid;
+  const f=$('#fltAssignee'), k2=f.value;
+  f.innerHTML='<option value="">All assignees</option>'+people.map(p=>`<option value="${esc(p.uid)}">${esc(p.name)}</option>`).join('');
+  f.value=k2;
+}
+function allProjects(){const s=new Set(projects);tasks.forEach(t=>t.project&&s.add(t.project));return [...s].sort((a,b)=>a.localeCompare(b,undefined,{sensitivity:'base'}))}
+function fillProjects(){
+  const p=allProjects();
   $('#projList').innerHTML=p.map(x=>`<option value="${esc(x)}">`).join('');
-  $('#asgList').innerHTML=a.map(x=>`<option value="${esc(x)}">`).join('');
-  const keepP=$('#fltProject').value,keepA=$('#fltAssignee').value;
-  $('#fltProject').innerHTML='<option value="">All projects</option>'+p.map(x=>`<option>${esc(x)}</option>`).join('');
-  $('#fltAssignee').innerHTML='<option value="">All assignees</option>'+a.map(x=>`<option>${esc(x)}</option>`).join('');
-  $('#fltProject').value=keepP;$('#fltAssignee').value=keepA;
+  const f=$('#fltProject'),k=f.value;
+  f.innerHTML='<option value="">All projects</option>'+p.map(x=>`<option>${esc(x)}</option>`).join('');
+  f.value=k;
 }
 
 // ---------- render ----------
 function render(){
-  fillLists();
-  const q=$('#q').value.trim().toLowerCase(), fp=$('#fltProject').value, fa=$('#fltAssignee').value, fs=$('#fltStatus').value, fpri=$('#fltPri').value;
+  if(!me)return;
+  fillProjects();
+  $('#stWho') && ($('#stWho').textContent=myName);
+  const q=$('#q').value.trim().toLowerCase(), fp=$('#fltProject').value, fa=$('#fltAssignee').value,
+        fs=$('#fltStatus').value, fpri=$('#fltPri').value, fsc=$('#fltScope').value;
   const today=todayISO();
   let open=0,over=0,dueToday=0;
-  tasks.forEach(t=>{if(t.status!=='Completed'){open++;if(isOverdue(t))over++;if(t.due===today)dueToday++}});
+  tasks.forEach(t=>{if(t.assignedTo===me.uid&&t.status!=='Completed'){open++;if(isOverdue(t))over++;if(t.due===today)dueToday++}});
   $('#stOpen').textContent=open;$('#stOver').textContent=over;$('#stToday').textContent=dueToday;
 
+  if(isAdmin && SEED.length && tasks.length===0){
+    $('#seedBar').style.display='flex';
+    $('#seedMsg').textContent=`${SEED.length} tasks from your spreadsheet are not in the database yet.`;
+  } else $('#seedBar').style.display='none';
+
   const rows=tasks.filter(t=>{
+    if(fsc==='mine'&&t.assignedTo!==me.uid)return false;
+    if(fsc==='sent'&&!(t.createdBy===me.uid&&t.assignedTo!==me.uid))return false;
     if(fp&&t.project!==fp)return false;
-    if(fa&&t.assignee!==fa)return false;
+    if(fa&&t.assignedTo!==fa)return false;
     if(fpri&&t.priority!==fpri)return false;
     if(fs==='open'&&t.status==='Completed')return false;
     if(fs==='overdue'&&!isOverdue(t))return false;
     if(STATUS.includes(fs)&&t.status!==fs)return false;
-    if(q&&!(`${t.task} ${t.notes} ${t.project} ${t.assignee}`.toLowerCase().includes(q)))return false;
+    if(q&&!(`${t.task} ${t.notes} ${t.project} ${nameOf(t.assignedTo)}`.toLowerCase().includes(q)))return false;
     return true;
-  }).sort((a,b)=> b.date.localeCompare(a.date) || b.id-a.id);
+  }).sort((a,b)=> (b.date||'').localeCompare(a.date||'') || (b.createdAt||'').localeCompare(a.createdAt||''));
   $('#count').textContent=`${rows.length} of ${tasks.length} tasks`;
 
   if(!rows.length){$('#tableWrap').innerHTML='<div class="empty">No tasks match. Add one above or clear the filters.</div>';return}
-  let html=`<table><colgroup><col style="width:88px"><col style="width:95px"><col style="width:115px"><col><col style="width:140px"><col style="width:230px"><col style="width:112px"><col style="width:92px"><col style="width:118px"><col style="width:28px"></colgroup><thead><tr><th>Date</th><th>Project</th><th class="hide">Assignee</th><th>Task</th><th>Due</th><th class="hide">Notes</th><th>Status</th><th>Priority</th><th class="hide">Date completed</th><th></th></tr></thead><tbody>`;
+  let html=`<table><colgroup><col style="width:88px"><col style="width:95px"><col style="width:125px"><col><col style="width:140px"><col style="width:210px"><col style="width:112px"><col style="width:92px"><col style="width:118px"><col style="width:28px"></colgroup><thead><tr><th>Date</th><th>Project</th><th>Assigned to</th><th>Task</th><th>Due</th><th class="hide">Notes</th><th>Status</th><th>Priority</th><th class="hide">Date completed</th><th></th></tr></thead><tbody>`;
   let lastDay=null;
   rows.forEach(t=>{
     if(t.date!==lastDay){lastDay=t.date;const n=rows.filter(r=>r.date===t.date).length;html+=`<tr class="day"><td colspan="10">${fmtDay(t.date)}<span class="n">${n} task${n>1?'s':''}</span></td></tr>`}
     const cls=t.status==='Completed'?'done':t.status==='In Progress'?'prog':isOverdue(t)?'overdue':'';
     const sCls=t.status==='Completed'?'s-c':t.status==='In Progress'?'s-ip':'s-ns';
+    const by=t.createdBy!==t.assignedTo?`<span class="byline">from ${esc(nameOf(t.createdBy))}</span>`:'';
     html+=`<tr class="task ${cls}" data-id="${t.id}">
       <td style="white-space:nowrap">${fmtDay(t.date)}</td>
       <td><input class="edit" data-f="project" value="${esc(t.project)}" list="projList"></td>
-      <td class="hide"><input class="edit" data-f="assignee" value="${esc(t.assignee)}" list="asgList"></td>
+      <td><select data-f="assignedTo" style="width:100%;border:0;background:transparent;color:inherit;padding:3px 1px">${people.map(p=>`<option value="${esc(p.uid)}" ${p.uid===t.assignedTo?'selected':''}>${esc(p.name)}</option>`).join('')}</select>${by}</td>
       <td><input class="edit" data-f="task" value="${esc(t.task)}"></td>
       <td class="due"><input class="edit" type="date" data-f="due" value="${t.due||''}"></td>
       <td class="hide"><input class="edit" data-f="notes" value="${esc(t.notes)}" placeholder="Notes"></td>
       <td class="status"><select data-f="status" class="${sCls}">${STATUS.map(s=>`<option ${s===t.status?'selected':''}>${s}</option>`).join('')}</select></td>
       <td class="pri"><select data-f="priority" class="p-${(t.priority||'').toLowerCase()}">${PRI.map(p=>`<option value="${p}" ${p===t.priority?'selected':''}>${p||'None'}</option>`).join('')}</select></td>
       <td class="hide done-at">${fmtStamp(t.completed)}</td>
-      <td class="del"><button type="button" title="Delete task" aria-label="Delete task">×</button></td>
+      <td class="del">${t.createdBy===me.uid||isAdmin?'<button type="button" title="Delete task" aria-label="Delete task">\u00d7</button>':''}</td>
     </tr>`;
   });
   $('#tableWrap').innerHTML=html+'</tbody></table>';
 }
 
-// ---------- events ----------
-$('#entry').addEventListener('submit',e=>{
+// ---------- writes ----------
+$('#entry').addEventListener('submit',async e=>{
   e.preventDefault();
-  const project=$('#fProject').value.trim(),task=$('#fTask').value.trim();
+  const project=$('#fProject').value.trim(), task=$('#fTask').value.trim();
   if(!project||!task){toast('Fill in Project and Task before adding.');return}
-  tasks.unshift({id:nextId++,date:todayISO(),project,assignee:$('#fAssignee').value.trim(),task,due:$('#fDue').value||null,notes:'',status:'Not Started',priority:$('#fPriority').value,completed:null});
-  save();
-  ['#fProject','#fAssignee','#fTask','#fDue'].forEach(s=>$(s).value='');
-  $('#fPriority').value='High';
-  render();$('#fProject').focus();toast('Task added');
+  const assignedTo=$('#fAssignee').value||me.uid;
+  try{
+    await addDoc(collection(db,'tasks'),{
+      date:todayISO(), project, task, assignedTo, createdBy:me.uid,
+      due:$('#fDue').value||null, notes:'', status:'Not Started',
+      priority:$('#fPriority').value, completed:null, createdAt:localNowISO()
+    });
+    ['#fProject','#fTask','#fDue'].forEach(s=>$(s).value='');
+    $('#fPriority').value='High';
+    $('#fProject').focus();
+    toast(assignedTo===me.uid?'Task added':`Assigned to ${nameOf(assignedTo)}`);
+  }catch(ex){toast('Could not save: '+ex.code)}
 });
-['#q','#fltProject','#fltAssignee','#fltStatus','#fltPri'].forEach(s=>$(s).addEventListener('input',render));
+['#q','#fltProject','#fltAssignee','#fltStatus','#fltPri','#fltScope'].forEach(s=>$(s).addEventListener('input',render));
 
-$('#tableWrap').addEventListener('change',e=>{
-  const tr=e.target.closest('tr.task');if(!tr)return;
-  const t=tasks.find(x=>x.id==tr.dataset.id);const f=e.target.dataset.f;if(!t||!f)return;
+$('#tableWrap').addEventListener('change',async e=>{
+  const tr=e.target.closest('tr.task'); if(!tr)return;
+  const t=tasks.find(x=>x.id===tr.dataset.id), f=e.target.dataset.f; if(!t||!f)return;
   let v=e.target.value;
-  if(f==='due')v=v||null; else if(f!=='status'&&f!=='priority')v=v.trim();
-  t[f]=v;
-  if(f==='status'){ if(v==='Completed'){if(!t.completed)t.completed=localNowISO()} else t.completed=null }
-  save();render();
+  if(f==='due')v=v||null; else if(f!=='status'&&f!=='priority'&&f!=='assignedTo')v=v.trim();
+  const patch={[f]:v};
+  if(f==='status')patch.completed = v==='Completed' ? (t.completed||localNowISO()) : null;
+  try{ await updateDoc(doc(db,'tasks',t.id),patch);
+       if(f==='assignedTo'&&v!==me.uid)toast(`Reassigned to ${nameOf(v)}`);
+  }catch(ex){toast('Could not save that change: '+ex.code);render()}
 });
-$('#tableWrap').addEventListener('click',e=>{
-  const b=e.target.closest('td.del button');if(!b)return;
-  const tr=b.closest('tr.task');const t=tasks.find(x=>x.id==tr.dataset.id);
-  if(confirm(`Delete this task?\n\n${t.project}: ${t.task}`)){tasks=tasks.filter(x=>x!==t);save();render();toast('Task deleted')}
+$('#tableWrap').addEventListener('click',async e=>{
+  const b=e.target.closest('td.del button'); if(!b)return;
+  const t=tasks.find(x=>x.id===b.closest('tr.task').dataset.id);
+  if(confirm(`Delete this task?\n\n${t.project}: ${t.task}`)){
+    try{await deleteDoc(doc(db,'tasks',t.id));toast('Task deleted')}catch(ex){toast('Could not delete: '+ex.code)}
+  }
 });
-$('#tableWrap').addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.classList.contains('edit')){e.target.blur()}});
+$('#tableWrap').addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.classList.contains('edit'))e.target.blur()});
 
-// lists dialog
-$('#btnLists').onclick=()=>{$('#txtProjects').value=allProjects().join('\n');$('#txtAssignees').value=allAssignees().join('\n');$('#dlgLists').showModal()};
+// ---------- settings ----------
+$('#btnLists').onclick=()=>{$('#txtName').value=myName;$('#txtProjects').value=allProjects().join('\n');$('#dlgLists').showModal()};
 $('#listsCancel').onclick=()=>$('#dlgLists').close();
-$('#listsSave').onclick=()=>{const split=s=>[...new Set(s.split('\n').map(x=>x.trim()).filter(Boolean))];lists={projects:split($('#txtProjects').value),assignees:split($('#txtAssignees').value)};save();$('#dlgLists').close();render();toast('Lists saved')};
+$('#listsSave').onclick=async()=>{
+  const nm=$('#txtName').value.trim()||myName;
+  const projs=[...new Set($('#txtProjects').value.split('\n').map(x=>x.trim()).filter(Boolean))];
+  try{ await setDoc(doc(db,'people',me.uid),{uid:me.uid,email:me.email,name:nm,projects:projs},{merge:true});
+       myName=nm; projects=projs; $('#dlgLists').close(); render(); toast('Saved');
+  }catch(ex){toast('Could not save: '+ex.code)}
+};
 
-// export / import
+// ---------- seed import (admin, one time) ----------
+$('#seedBtn').onclick=async()=>{
+  if(!confirm(`Import ${SEED.length} tasks from the spreadsheet? They will all be assigned to you.`))return;
+  $('#seedBtn').disabled=true;
+  try{
+    for(let i=0;i<SEED.length;i+=400){
+      const b=writeBatch(db);
+      SEED.slice(i,i+400).forEach(t=>b.set(doc(collection(db,'tasks')),{
+        date:t.date,project:t.project,task:t.task,assignedTo:me.uid,createdBy:me.uid,
+        due:t.due||null,notes:t.notes||'',status:t.status,priority:t.priority||'',
+        completed:t.completed||null,createdAt:t.date+'T00:00:00'}));
+      await b.commit();
+    }
+    toast(`${SEED.length} tasks imported`);
+  }catch(ex){toast('Import failed: '+ex.code);$('#seedBtn').disabled=false}
+};
+
+// ---------- export ----------
 function download(name,text,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),500)}
-$('#btnExport').onclick=()=>{download(`bww-tasks-${todayISO()}.json`,JSON.stringify({tasks,lists},null,1),'application/json');toast('Backup downloaded')};
+$('#btnExport').onclick=()=>{download(`bww-tasks-${todayISO()}.json`,JSON.stringify(tasks.map(t=>({...t,assignee:nameOf(t.assignedTo)})),null,1),'application/json');toast('Backup downloaded')};
 $('#btnCsv').onclick=()=>{
-  const cols=['date','project','assignee','task','due','notes','status','priority','completed'];
   const cell=v=>`"${String(v??'').replace(/"/g,'""')}"`;
-  const csv=[['Date','Project','Assignee','Task','Due Date','Notes','Status','Priority','Date completed'].map(cell).join(',')]
-    .concat(tasks.map(t=>cols.map(c=>cell(c==='date'?fmtDay(t.date):c==='due'?fmtDay(t.due):c==='completed'?fmtStamp(t.completed):t[c])).join(','))).join('\r\n');
+  const csv=[['Date','Project','Assigned to','Assigned by','Task','Due Date','Notes','Status','Priority','Date completed'].map(cell).join(',')]
+    .concat(tasks.map(t=>[fmtDay(t.date),t.project,nameOf(t.assignedTo),nameOf(t.createdBy),t.task,fmtDay(t.due),t.notes,t.status,t.priority,fmtStamp(t.completed)].map(cell).join(','))).join('\r\n');
   download(`bww-tasks-${todayISO()}.csv`,csv,'text/csv');toast('CSV downloaded');
 };
 $('#btnImport').onclick=()=>{$('#txtImport').value='';$('#dlgImport').showModal()};
 $('#impCancel').onclick=()=>$('#dlgImport').close();
-function doImport(replace){
+async function doImport(){
   let data;try{data=JSON.parse($('#txtImport').value)}catch(e){toast('That is not valid JSON.');return}
   const inTasks=Array.isArray(data)?data:(data.tasks||[]);
-  if(!inTasks.length){toast('No tasks found in that text.');return}
-  const clean=inTasks.filter(t=>t&&t.task).map(t=>({id:nextId++,date:t.date||todayISO(),project:t.project||'',assignee:t.assignee||'',task:t.task,due:t.due||null,notes:t.notes||'',status:STATUS.includes(t.status)?t.status:'Not Started',priority:PRI.includes(t.priority)?t.priority:'',completed:t.completed||null}));
-  tasks=replace?clean:clean.concat(tasks);
-  if(data.lists)lists=data.lists;
-  save();$('#dlgImport').close();render();toast(`${clean.length} tasks imported`);
+  const clean=inTasks.filter(t=>t&&t.task);
+  if(!clean.length){toast('No tasks found in that text.');return}
+  try{
+    for(let i=0;i<clean.length;i+=400){
+      const b=writeBatch(db);
+      clean.slice(i,i+400).forEach(t=>b.set(doc(collection(db,'tasks')),{
+        date:t.date||todayISO(),project:t.project||'',task:t.task,assignedTo:me.uid,createdBy:me.uid,
+        due:t.due||null,notes:t.notes||'',status:STATUS.includes(t.status)?t.status:'Not Started',
+        priority:PRI.includes(t.priority)?t.priority:'',completed:t.completed||null,createdAt:localNowISO()}));
+      await b.commit();
+    }
+    $('#dlgImport').close();toast(`${clean.length} tasks imported`);
+  }catch(ex){toast('Import failed: '+ex.code)}
 }
-$('#impMerge').onclick=()=>doImport(false);
-$('#impReplace').onclick=()=>{if(confirm('Replace every task on screen with the imported list?'))doImport(true)};
+$('#impMerge').onclick=doImport;
+$('#impReplace').onclick=doImport;
 
-// keyboard: "n" jumps to new task
-document.addEventListener('keydown',e=>{if(e.key==='n'&&!/input|select|textarea/i.test(e.target.tagName)){e.preventDefault();$('#fProject').focus()}});
-
-render();
+document.addEventListener('keydown',e=>{if(e.key==='n'&&!/input|select|textarea/i.test(e.target.tagName)&&me){e.preventDefault();$('#fProject').focus()}});
+addEventListener('online',()=>$('#offBar').style.display='none');
+addEventListener('offline',()=>$('#offBar').style.display='block');
+if(!navigator.onLine)$('#offBar').style.display='block';
+if('serviceWorker' in navigator){addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}))}
 </script>
+</div>
 </body>
 </html>
